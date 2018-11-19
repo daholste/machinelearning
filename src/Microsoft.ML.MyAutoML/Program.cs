@@ -17,9 +17,12 @@ namespace Microsoft.ML.Runtime.Tools.Console
         {
             var stopwatch = Stopwatch.StartNew();
 
-            var datasetName = "Criteo_40K";
-            var labelColName = "0";
+            var datasetName = "Benz";
+            var labelColName = "y";
             var datasetsDir = @"C:\Datasets\";
+            var numIterations = 200;
+            var trainerKind = MacroUtils.TrainerKinds.SignatureRegressorTrainer;
+            var metricToOptimize = PipelineSweeperSupportedMetrics.Metrics.RSquared;
 
             MyGlobals.DatasetName = datasetName;
             MyGlobals.Stopwatch = stopwatch;
@@ -52,10 +55,9 @@ namespace Microsoft.ML.Runtime.Tools.Console
                     Arguments = textLoaderArgs
                 }).Data;
 
-                var metric = Runtime.PipelineInference.PipelineSweeperSupportedMetrics.GetSupportedMetric(Runtime.PipelineInference.PipelineSweeperSupportedMetrics.Metrics.Accuracy);
+                var metric = PipelineSweeperSupportedMetrics.GetSupportedMetric(metricToOptimize);
                 var rocketEngine = new RocketEngine(env, new RocketEngine.Arguments() { });
-                var terminator = new IterationTerminator(30);
-                var trainerKind = MacroUtils.TrainerKinds.SignatureBinaryClassifierTrainer;
+                var terminator = new IterationTerminator(numIterations);
 
                 AutoMlMlState amls = new AutoMlMlState(env, metric, rocketEngine, terminator, trainerKind,
                     trainData, validData);
