@@ -81,7 +81,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     supportedMetric = new SupportedMetric(FieldNames.PipelineSweeperSupportedMetrics.LossFn, false);
                     break;
                 case Metrics.RSquared:
-                    supportedMetric = new SupportedMetric(FieldNames.PipelineSweeperSupportedMetrics.RSquared, false);
+                    supportedMetric = new SupportedMetric(FieldNames.PipelineSweeperSupportedMetrics.RSquared, true);
                     break;
                 case Metrics.LogLoss:
                     supportedMetric = new SupportedMetric(FieldNames.PipelineSweeperSupportedMetrics.LogLoss, false);
