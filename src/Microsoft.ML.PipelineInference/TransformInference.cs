@@ -304,7 +304,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             yield return new Experts.LabelAdvisory();
 
             // For boolean columns use convert transform
-            yield return new Experts.Boolean();
+            //yield return new Experts.Boolean();
 
             // For categorical columns, use Cat transform.
             yield return new Experts.Categorical();
@@ -325,13 +325,13 @@ namespace Microsoft.ML.Runtime.PipelineInference
             yield return new Experts.TextUniGramTriGram();
 
             // For text columns, also use TextTransform with Bigram + trichar.
-            yield return new Experts.TextBiGramTriGram();
+            //yield return new Experts.TextBiGramTriGram();
 
             //For text columns, also use SDCA based transform.
-            yield return new Experts.SdcaTransform();
+            //yield return new Experts.SdcaTransform();
 
             //For text columns, also use tree leaf based transform.
-            yield return new Experts.NaiveBayesTransform();
+            //yield return new Experts.NaiveBayesTransform();
         }
 
         public static class Experts

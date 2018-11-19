@@ -99,7 +99,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return null;
         }
 
-        public static ColumnGroupingInference.GroupingColumn[] InferColumnPurposes(IChannel ch, IHost env, TextFileSample sample, TextFileContents.ColumnSplitResult splitResult, out bool hasHeader)
+        public static ColumnGroupingInference.GroupingColumn[] InferColumnPurposes(IChannel ch, IHost env, TextFileSample sample, TextFileContents.ColumnSplitResult splitResult,
+            out bool hasHeader, string colLabelName = null)
         {
             ch.Info("Detecting column types");
             var typeInferenceResult = ColumnTypeInference.InferTextFileColumnTypes(env, sample,
@@ -111,7 +112,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     AllowQuote = splitResult.AllowQuote,
                 });
 
-            hasHeader = typeInferenceResult.HasHeader;
+            hasHeader = true;
             if (!typeInferenceResult.IsSuccess)
             {
                 ch.Error("Couldn't detect column types.");
@@ -130,7 +131,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
             var typedData = TextLoader.ReadFile(env, typedLoaderArgs, sample);
 
             var purposeInferenceResult = PurposeInference.InferPurposes(env, typedData,
-                Utils.GetIdentityPermutation(typedLoaderArgs.Column.Length), new PurposeInference.Arguments());
+                Utils.GetIdentityPermutation(typedLoaderArgs.Column.Length), new PurposeInference.Arguments(),
+                colLabelName: colLabelName);
             ch.Info("Detecting column grouping and generating column names");
 
             ColumnGroupingInference.GroupingColumn[] groupingResult = ColumnGroupingInference.InferGroupingAndNames(env, typeInferenceResult.HasHeader,

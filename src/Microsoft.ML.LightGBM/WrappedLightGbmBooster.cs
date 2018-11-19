@@ -167,6 +167,11 @@ namespace Microsoft.ML.Runtime.LightGBM
                         cats.Add(cat);
                 }
             }
+            if(cats.Count() == 0)
+            {
+                var str = string.Join(",", catThreshold);
+                Console.WriteLine("ruh roh first");
+            }
             return cats.ToArray();
         }
 
@@ -220,6 +225,10 @@ namespace Microsoft.ML.Runtime.LightGBM
                                 {
                                     int catIdx = (int)threshold[node];
                                     var cats = GetCatThresholds(catThreshold, catBoundaries[catIdx], catBoundaries[catIdx + 1]);
+                                    if(cats.Length == 0)
+                                    {
+                                        System.Console.WriteLine("ruh roh");
+                                    }
                                     categoricalSplitFeatures[node] = new int[cats.Length];
                                     // Convert Cat thresholds to feature indices.
                                     for (int j = 0; j < cats.Length; ++j)

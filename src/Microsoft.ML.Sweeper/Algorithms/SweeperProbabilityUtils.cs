@@ -141,6 +141,7 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
             // If all weights equal zero, set to 1 (to avoid divide by zero).
             if (total <= Double.Epsilon)
             {
+                Console.WriteLine($"{total} {Double.Epsilon}");
                 weights.SetValue(1, 0, weights.Length);
                 total = weights.Length;
             }

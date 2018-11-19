@@ -78,6 +78,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
             var sampledTransforms = AvailableTransforms.ToList();
             transformsBitMask = AutoMlUtils.TransformsToBitmask(sampledTransforms.ToArray());
 
+            //sampledTransforms = sampledTransforms.Take(sampledTransforms.Count() - 3).ToList();
+
             // Add final features concat transform.
             sampledTransforms.AddRange(AutoMlUtils.GetFinalFeatureConcat(Env, FullyTransformedData,
                 DependencyMapping, sampledTransforms.ToArray(), AvailableTransforms, DataRoles));

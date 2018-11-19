@@ -344,6 +344,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 hasHeader = fileArgs.HasHeader;
             else
                 hasHeader = suspect > 0;
+            hasHeader = true;
 
             // suggest names
             var names = new List<string>();

@@ -13,6 +13,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Xunit;
 using Xunit.Abstractions;
+using static Microsoft.ML.Runtime.PipelineInference.AutoInference;
 
 namespace Microsoft.ML.Runtime.RunTests
 {
@@ -72,7 +73,7 @@ namespace Microsoft.ML.Runtime.RunTests
             Done();
         }
 
-        [Fact(Skip = "Need CoreTLC specific baseline update")]
+        [Fact]
         public void TestTextDatasetLearn()
         {
             using (var env = new ConsoleEnvironment()
@@ -83,16 +84,17 @@ namespace Microsoft.ML.Runtime.RunTests
                 int numIterations = 35;
                 int numTransformLevels = 1;
                 int numSampleRows = 100;
-                SupportedMetric metric = PipelineSweeperSupportedMetrics.GetSupportedMetric(PipelineSweeperSupportedMetrics.Metrics.AccuracyMicro);
+                SupportedMetric metric = PipelineSweeperSupportedMetrics.GetSupportedMetric(PipelineSweeperSupportedMetrics.Metrics.Accuracy);
 
                 // Using the simple, uniform random sampling (with replacement) engine
-                PipelineOptimizerBase autoMlEngine = new UniformRandomEngine(env);
+                PipelineOptimizerBase autoMlEngine = new RocketEngine(env, new RocketEngine.Arguments() { });
 
                 // Test initial learning
                 var amls = AutoInference.InferPipelines(env, autoMlEngine, pathData, "", out var _, numTransformLevels, batchSize,
                 metric, out var _, numSampleRows, new IterationTerminator(numIterations),
-                MacroUtils.TrainerKinds.SignatureMultiClassClassifierTrainer);
-                env.Check(amls.GetAllEvaluatedPipelines().Length == numIterations);
+                    MacroUtils.TrainerKinds.SignatureBinaryClassifierTrainer);
+                var pipelines = amls.GetAllEvaluatedPipelines();
+                env.Check(pipelines.Length == numIterations);
             }
             Done();
         }
@@ -133,6 +135,55 @@ namespace Microsoft.ML.Runtime.RunTests
                 env.Check(!lr1.PipelineNode.SweepParams[0].RawValue.Equals(lr2.PipelineNode.SweepParams[0].RawValue));
                 env.Check(!sdca2.PipelineNode.SweepParams[0].RawValue.Equals(sdca1.PipelineNode.SweepParams[0].RawValue));
             }
+        }
+
+        [Fact]
+        public void RunMyAutoMl()
+        {
+            using (var env = new ConsoleEnvironment().AddStandardComponents())
+            {
+                string trainDataPath = @"D:\SplitDatasets\VirusPrediction_train.csv";
+                string validDataPath = @"D:\SplitDatasets\VirusPrediction_valid.csv";
+                string testDataPath = @"D:\SplitDatasets\VirusPrediction_test.csv";
+
+                var schema = "sep=, col=Label:R4:0 col=Features:R4:1-17 header=+";
+
+#pragma warning disable 0618
+                var trainData = ImportTextData.ImportText(env, new ImportTextData.Input
+                {
+                    InputFile = new SimpleFileHandle(env, trainDataPath, false, false),
+                    CustomSchema = schema
+                }).Data;
+                var validData = ImportTextData.ImportText(env, new ImportTextData.Input
+                {
+                    InputFile = new SimpleFileHandle(env, validDataPath, false, false),
+                    CustomSchema = schema
+                }).Data;
+                var testData = ImportTextData.ImportText(env, new ImportTextData.Input
+                {
+                    InputFile = new SimpleFileHandle(env, testDataPath, false, false),
+                    CustomSchema = schema
+                }).Data;
+#pragma warning restore 0618
+
+                var metric = PipelineSweeperSupportedMetrics.GetSupportedMetric(PipelineSweeperSupportedMetrics.Metrics.Accuracy);
+                var rocketEngine = new RocketEngine(env, new RocketEngine.Arguments() { });
+                var terminator = new IterationTerminator(20);
+                var trainerKind = MacroUtils.TrainerKinds.SignatureBinaryClassifierTrainer;
+
+                AutoMlMlState amls = new AutoMlMlState(env, metric, rocketEngine, terminator, trainerKind,
+                    trainData, validData);
+                var bestPipeline = amls.InferPipelines(10, 3, 100);
+
+                bestPipeline.RunTrainTestExperiment(trainData,
+                    validData, metric, trainerKind, out var testMetricVal, out var trainMetricVal);
+                bestPipeline.RunTrainTestExperiment(trainData,
+                    testData, metric, trainerKind, out testMetricVal, out trainMetricVal);
+
+                //var numTrainingRows = (long)trainData.GetRowCount(false) < int.MaxValue ? (int)trainData.GetRowCount() : int.MaxValue;
+            }
+
+            
         }
 
         [Fact]
@@ -195,7 +246,7 @@ namespace Microsoft.ML.Runtime.RunTests
             using (var env = new ConsoleEnvironment()
                 .AddStandardComponents()) // AutoInference uses ComponentCatalog to find all learners
             {
-                SupportedMetric metric = PipelineSweeperSupportedMetrics.GetSupportedMetric(PipelineSweeperSupportedMetrics.Metrics.AccuracyMicro);
+                SupportedMetric metric = PipelineSweeperSupportedMetrics.GetSupportedMetric(PipelineSweeperSupportedMetrics.Metrics.Accuracy);
 
                 // Using the simple, uniform random sampling (with replacement) brain
                 PipelineOptimizerBase autoMlBrain = new UniformRandomEngine(env);

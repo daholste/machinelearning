@@ -13,6 +13,10 @@ using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.Runtime.PipelineInference;
 using Microsoft.ML.Runtime.EntryPoints.JsonUtils;
 using Newtonsoft.Json.Linq;
+using System.IO;
+using static Microsoft.ML.Runtime.PipelineInference.TransformInference.Experts;
+using System.Text;
+using Microsoft.ML.PipelineInference;
 
 [assembly: EntryPointModule(typeof(AutoInference.AutoMlMlState.Arguments))]
 [assembly: EntryPointModule(typeof(AutoInference.ISupportAutoMlStateFactory))]
@@ -194,6 +198,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             private void MainLearningLoop(int batchSize, int numOfTrainingRows)
             {
+                var overallExecutionTime = Stopwatch.StartNew();
                 var stopwatch = new Stopwatch();
                 var probabilityUtils = new Sweeper.Algorithms.SweeperProbabilityUtils(_host);
 
@@ -216,10 +221,11 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         {
                             ProcessPipeline(probabilityUtils, stopwatch, candidate, numOfTrainingRows);
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
+                            File.AppendAllText($"{MyGlobals.DatasetName}_crash_dump", $"{candidate.Learner.PipelineNode} Crashed {e}\r\n");
+                            MyGlobals.FailedPipelineHashes.Add(candidate.Learner.PipelineNode.ToString());
                             stopwatch.Stop();
-                            return;
                         }
                     }
                 }
@@ -235,7 +241,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                 // Run pipeline, and time how long it takes
                 stopwatch.Restart();
-                candidate.RunTrainTestExperiment(_trainData.Take(randomizedNumberOfRows),
+                candidate.RunTrainTestExperiment(_trainData,
                     _testData, Metric, TrainerKind, out var testMetricVal, out var trainMetricVal);
                 stopwatch.Stop();
 
@@ -247,6 +253,28 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 candidate.PerformanceSummary = new PipelineSweeperRunSummary(testMetricVal, randomizedNumberOfRows, stopwatch.ElapsedMilliseconds, trainMetricVal);
                 _sortedSampledElements.Add(candidate.PerformanceSummary.MetricValue, candidate);
                 _history.Add(candidate);
+
+                var transformsSb = new StringBuilder();
+                foreach (var transform in candidate.Transforms)
+                {
+                    transformsSb.Append("xf:");
+                    transformsSb.Append(transform.Transform);
+                    transformsSb.Append(" ");
+                }
+                var learnerStr = candidate.Learner.ToString();
+                learnerStr = learnerStr.Replace(",", "");
+                learnerStr = learnerStr.Replace("False", "-");
+                learnerStr = learnerStr.Replace("True", "+");
+                learnerStr = learnerStr.Replace("LearningRate:0 ", "");
+                learnerStr = learnerStr.Replace("NumLeaves:0", "");
+                learnerStr = learnerStr.Replace("Trainers.", "");
+                learnerStr = learnerStr.Replace("LightGbmClassifier", "LightGBMMulticlass");
+                learnerStr = learnerStr.Replace("LightGbmBinaryClassifier", "LightGBMBinary");
+                learnerStr = learnerStr.Replace("LogisticRegressionClassifier", "MultiClassLogisticRegression");
+                learnerStr = learnerStr.Replace("FastTreeBinaryClassifier", "FastTreeBinaryClassification");
+                learnerStr = learnerStr.Replace("FieldAwareFactorizationMachineBinaryClassifier", "FieldAwareFactorizationMachine");
+                var commandLineStr = $"{transformsSb.ToString()} tr={learnerStr}";
+                File.AppendAllText($"{MyGlobals.DatasetName}.tsv", $"{_sortedSampledElements.Count}\t{candidate.PerformanceSummary.MetricValue}\t{MyGlobals.Stopwatch.Elapsed}\t{commandLineStr}\r\n");
             }
 
             public void UpdateTerminator(ITerminator terminator)
@@ -260,6 +288,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
             {
                 // Infer transforms using experts
                 var levelTransforms = TransformInference.InferTransforms(_env, data, args, _dataRoles);
+                //levelTransforms = levelTransforms.Where(x => x.Transform.Kind != "TreeFeaturizationTransform").ToArray();
+                levelTransforms = levelTransforms.Where(x => !x.ExpertType.Equals(typeof(NaiveBayesTransform))).ToArray();
 
                 // Retain only those transforms inferred which were also passed in.
                 if (existingTransforms != null)
@@ -408,6 +438,29 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 while (_sortedSampledElements.ContainsKey(d))
                     d += 1e-3;
                 _sortedSampledElements.Add(d, pipeline);
+
+                var transformsSb = new StringBuilder();
+                foreach(var transform in pipeline.Transforms)
+                {
+                    transformsSb.Append("xf:");
+                    transformsSb.Append(transform.Transform);
+                    transformsSb.Append(" ");
+                }
+                var learnerStr = pipeline.Learner.ToString();
+                learnerStr = learnerStr.Replace(",", "");
+                learnerStr = learnerStr.Replace("False", "-");
+                learnerStr = learnerStr.Replace("True", "+");
+                learnerStr = learnerStr.Replace("LearningRate:0 ", "");
+                learnerStr = learnerStr.Replace("NumLeaves:0", "");
+                learnerStr = learnerStr.Replace("Trainers.", "");
+                learnerStr = learnerStr.Replace("LightGbmClassifier", "LightGBMMulticlass");
+                learnerStr = learnerStr.Replace("LightGbmBinaryClassifier", "LightGBMBinary");
+                learnerStr = learnerStr.Replace("LogisticRegressionClassifier", "MultiClassLogisticRegression");
+                learnerStr = learnerStr.Replace("FastTreeBinaryClassifier", "FastTreeBinaryClassification");
+                learnerStr = learnerStr.Replace("FieldAwareFactorizationMachineBinaryClassifier", "FieldAwareFactorizationMachine");
+                var commandLineStr = $"{transformsSb.ToString()} tr={learnerStr}";
+                File.AppendAllText($"{MyGlobals.DatasetName}.tsv", $"{_sortedSampledElements.Count}\t{pipeline.PerformanceSummary.MetricValue}\t{MyGlobals.Stopwatch.Elapsed}\t{commandLineStr}\r\n");
+
                 _history.Add(pipeline);
 
                 using (var ch = _host.Start("Suggested Pipeline"))
@@ -486,7 +539,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             // infer recipes. Look into this.
             // Set loader settings through inference
             RecipeInference.InferRecipesFromData(env, trainDataPath, schemaDefinitionFile,
-                out var _, out schemaDefinition, out var _, true);
+                out var _, out schemaDefinition, out var _, false);
 
 #pragma warning disable 0618
             var data = ImportTextData.ImportText(env, new ImportTextData.Input

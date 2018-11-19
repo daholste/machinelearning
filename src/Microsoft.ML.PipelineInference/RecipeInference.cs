@@ -17,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Microsoft.ML.Legacy.Trainers;
 
 namespace Microsoft.ML.Runtime.PipelineInference
 {
@@ -366,6 +367,27 @@ namespace Microsoft.ML.Runtime.PipelineInference
             public override string ToString() => "Treeleaf multiclass";
         }
 
+        public static TextLoader.Arguments MyAutoMlInferTextLoaderArguments(IHostEnvironment env,
+            string dataFile, string labelColName)
+        {
+            var h = env.Register("InferRecipesFromData", seed: 0, verbose: false);
+            using (var ch = h.Start("InferRecipesFromData"))
+            {
+                var sample = TextFileSample.CreateFromFullFile(h, dataFile);
+                var splitResult = TextFileContents.TrySplitColumns(h, sample, TextFileContents.DefaultSeparators);
+                var columnPurposes = InferenceUtils.InferColumnPurposes(ch, h, sample, splitResult,
+                    out var hasHeader, labelColName);
+                return new TextLoader.Arguments
+                {
+                    Column = ColumnGroupingInference.GenerateLoaderColumns(columnPurposes),
+                    HasHeader = true,
+                    Separator = splitResult.Separator,
+                    AllowSparse = splitResult.AllowSparse,
+                    AllowQuoting = splitResult.AllowQuote
+                };
+            }
+        }
+
         public static SuggestedRecipe[] InferRecipesFromData(IHostEnvironment env, string dataFile, string schemaDefinitionFile,
             out Type predictorType, out string settingsString, out TransformInference.InferenceResult inferenceResult,
             bool excludeFeaturesConcatTransforms = false)
@@ -536,6 +558,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             var trainerTypes = typeof(Experiment).Assembly.GetTypes()
                 .Where(p => type.IsAssignableFrom(p) &&
                     MacroUtils.IsTrainerOfKind(p, trainerKind));
+            trainerTypes = trainerTypes.Where(y => !typeof(GeneralizedAdditiveModelBinaryClassifier).Equals(y));
 
             foreach (var tt in trainerTypes)
             {

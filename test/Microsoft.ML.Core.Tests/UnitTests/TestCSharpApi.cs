@@ -454,7 +454,7 @@ namespace Microsoft.ML.Runtime.RunTests
                 var data = experiment.GetOutput(crossValidateOutput.OverallMetrics);
 
                 var schema = data.Schema;
-                var b = schema.TryGetColumnIndex("Accuracy(micro-avg)", out int metricCol);
+                var b = schema.TryGetColumnIndex("Accuracy", out int metricCol);
                 Assert.True(b);
                 b = schema.TryGetColumnIndex("Fold Index", out int foldCol);
                 Assert.True(b);

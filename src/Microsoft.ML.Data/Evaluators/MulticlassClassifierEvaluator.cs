@@ -37,7 +37,7 @@ namespace Microsoft.ML.Runtime.Data
             public bool Names = true;
         }
 
-        public const string AccuracyMicro = "Accuracy(micro-avg)";
+        public const string AccuracyMicro = "Accuracy";
         public const string AccuracyMacro = "Accuracy(macro-avg)";
         public const string TopKAccuracy = "Top K accuracy";
         public const string PerClassLogLoss = "Per class log-loss";

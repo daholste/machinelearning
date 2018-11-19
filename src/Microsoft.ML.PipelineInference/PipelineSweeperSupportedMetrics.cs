@@ -15,7 +15,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         public enum Metrics
         {
             Auc,
-            AccuracyMicro,
+            Accuracy,
             AccuracyMacro,
             L1,
             L2,
@@ -53,7 +53,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 case Metrics.Auc:
                     supportedMetric = new SupportedMetric(FieldNames.PipelineSweeperSupportedMetrics.Auc, true);
                     break;
-                case Metrics.AccuracyMicro:
+                case Metrics.Accuracy:
                     supportedMetric = new SupportedMetric(FieldNames.PipelineSweeperSupportedMetrics.AccuracyMicro, true);
                     break;
                 case Metrics.AccuracyMacro:

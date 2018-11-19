@@ -141,12 +141,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     {
                         if (column.IsPurposeSuggested)
                             continue;
-                        if (Regex.IsMatch(column.ColumnName, @"label", RegexOptions.IgnoreCase))
+                        /*if (Regex.IsMatch(column.ColumnName, @"label", RegexOptions.IgnoreCase))
                             column.SuggestedPurpose = ColumnPurpose.Label;
                         if (Regex.IsMatch(column.ColumnName, @"^target$", RegexOptions.IgnoreCase))
                             column.SuggestedPurpose = ColumnPurpose.Label;
                         else if (Regex.IsMatch(column.ColumnName, @"^m_rating$", RegexOptions.IgnoreCase))
-                            column.SuggestedPurpose = ColumnPurpose.Label;
+                            column.SuggestedPurpose = ColumnPurpose.Label;*/
                         else if (Regex.IsMatch(column.ColumnName, @"^m_queryid$", RegexOptions.IgnoreCase))
                             column.SuggestedPurpose = ColumnPurpose.Group;
                         else if (Regex.IsMatch(column.ColumnName, @"group", RegexOptions.IgnoreCase))
@@ -230,7 +230,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     if (firstNumeric != null)
                     {
-                        firstNumeric.SuggestedPurpose = ColumnPurpose.Label;
+                        //firstNumeric.SuggestedPurpose = ColumnPurpose.Label;
                         ch.Info("Column '{0}' auto-designated as label.", firstNumeric.ColumnName);
                     }
                 }
@@ -320,9 +320,10 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// <param name="columnIndices">Indices of columns that we're interested in.</param>
         /// <param name="args">Additional arguments to inference.</param>
         /// <param name="dataRoles">(Optional) User defined Role mappings for data.</param>
+        /// <param name="colLabelName">(Optional) User defined Role mappings for data.</param>
         /// <returns>The result includes the array of auto-detected column purposes.</returns>
         public static InferenceResult InferPurposes(IHostEnvironment env, IDataView data, IEnumerable<int> columnIndices, Arguments args,
-            RoleMappedData dataRoles = null)
+            RoleMappedData dataRoles = null, string colLabelName = null)
         {
             Contracts.CheckValue(env, nameof(env));
             var host = env.Register("InferPurposes");
@@ -352,6 +353,18 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     using (var expertChannel = host.Start(expert.GetType().ToString()))
                     {
                         expert.Apply(expertChannel, cols.ToArray());
+                    }
+                }
+
+                if (colLabelName == null)
+                {
+                    colLabelName = "Label";
+                }
+                foreach (var col in cols)
+                {
+                    if (col.ColumnName == colLabelName)
+                    {
+                        col.SuggestedPurpose = ColumnPurpose.Label;
                     }
                 }
 

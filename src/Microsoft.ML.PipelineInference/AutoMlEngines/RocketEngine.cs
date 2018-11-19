@@ -4,7 +4,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Microsoft.ML.PipelineInference;
 using Microsoft.ML.Runtime.CommandLine;
 using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.Runtime.EntryPoints;
@@ -40,7 +42,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         {
             [Argument(ArgumentType.AtMostOnce, ShortName = "topk",
                 HelpText = "Number of learners to retain for second stage.", SortOrder = 1)]
-            public int TopKLearners = 2;
+            public int TopKLearners = 3;
 
             [Argument(ArgumentType.AtMostOnce, ShortName = "stage2num",
                 HelpText = "Number of trials for retained second stage learners.", SortOrder = 2)]
@@ -129,6 +131,19 @@ namespace Microsoft.ML.Runtime.PipelineInference
         private TransformInference.SuggestedTransform[] SampleTransforms(RecipeInference.SuggestedRecipe.SuggestedLearner learner,
             PipelinePattern[] history, out long transformsBitMask, bool uniformRandomSampling = false)
         {
+            // For now, return all transforms.
+            var sampledTransforms = AvailableTransforms.ToList();
+            transformsBitMask = AutoMlUtils.TransformsToBitmask(sampledTransforms.ToArray());
+
+            //sampledTransforms = sampledTransforms.Take(sampledTransforms.Count() - 3).ToList();
+
+            // Add final features concat transform.
+            sampledTransforms.AddRange(AutoMlUtils.GetFinalFeatureConcat(Env, FullyTransformedData,
+                DependencyMapping, sampledTransforms.ToArray(), AvailableTransforms, DataRoles));
+
+            return sampledTransforms.ToArray();
+            /*
+
             var sampledTransforms =
                 new List<TransformInference.SuggestedTransform>(
                     AutoMlUtils.GetMandatoryTransforms(AvailableTransforms));
@@ -188,7 +203,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 DependencyMapping, sampledTransforms.ToArray(), AvailableTransforms, DataRoles));
             transformsBitMask = mask;
 
-            return sampledTransforms.ToArray();
+            return sampledTransforms.ToArray();*/
         }
 
         private RecipeInference.SuggestedRecipe.SuggestedLearner[] GetTopLearners(IEnumerable<PipelinePattern> history)
@@ -202,6 +217,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
         public override PipelinePattern[] GetNextCandidates(IEnumerable<PipelinePattern> history, int numCandidates, RoleMappedData dataRoles)
         {
+
             var prevCandidates = history.ToArray();
             DataRoles = dataRoles;
 
@@ -218,7 +234,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         // Select top k learners, update stage, then get requested
                         // number of candidates, using second stage logic.
                         UpdateLearners(GetTopLearners(prevCandidates));
-                        _currentStage++;
+                        _currentStage += 2;
                         return GetNextCandidates(prevCandidates, numCandidates, DataRoles);
                     }
                     else
@@ -279,6 +295,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     sampledLearners[item.i] = AvailableLearners[item.idx].Clone();
             }
 
+            var totalSkipped = 0;
+
             // Select hyperparameters and transforms based on learner and history.
             foreach (var learner in sampledLearners)
             {
@@ -299,8 +317,15 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         SampleTransforms(learner, history, out var transformsBitMask, uniformRandomTransforms),
                         learner, "", Env);
                     hashKey = GetHashKey(transformsBitMask, learner);
-                    valid = PipelineVerifier(pipeline, transformsBitMask) && !VisitedPipelines.Contains(hashKey);
+                    valid = PipelineVerifier(pipeline, transformsBitMask); //&&
+                    valid = valid && !VisitedPipelines.Contains(hashKey) &&
+                        !MyGlobals.FailedPipelineHashes.Contains(learner.PipelineNode.ToString());
                     count++;
+
+                    if(count >= maxNumberAttempts)
+                    {
+                        Console.WriteLine($"{++totalSkipped} got hereee");
+                    }
                 } while (!valid && count <= maxNumberAttempts);
 
                 // If maxed out chances and at second stage, move onto next stage.
@@ -314,7 +339,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     candidates.Add(pipeline);
                 }
             }
-
             return candidates.ToArray();
         }
     }
