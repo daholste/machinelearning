@@ -204,29 +204,36 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                 while (!_terminator.ShouldTerminate(_history))
                 {
-                    // Get next set of candidates
-                    var currentBatchSize = batchSize;
-                    if (_terminator is IterationTerminator itr)
-                        currentBatchSize = Math.Min(itr.RemainingIterations(_history), batchSize);
-                    var candidates = AutoMlEngine.GetNextCandidates(_sortedSampledElements.Values, currentBatchSize, _dataRoles);
-
-                    // Break if no candidates returned, means no valid pipeline available.
-                    if (candidates.Length == 0)
-                        break;
-
-                    // Evaluate them on subset of data
-                    foreach (var candidate in candidates)
+                    try
                     {
-                        try
+                        // Get next set of candidates
+                        var currentBatchSize = batchSize;
+                        if (_terminator is IterationTerminator itr)
+                            currentBatchSize = Math.Min(itr.RemainingIterations(_history), batchSize);
+                        var candidates = AutoMlEngine.GetNextCandidates(_sortedSampledElements.Values, currentBatchSize, _dataRoles);
+
+                        // Break if no candidates returned, means no valid pipeline available.
+                        if (candidates.Length == 0)
+                            break;
+
+                        // Evaluate them on subset of data
+                        foreach (var candidate in candidates)
                         {
-                            ProcessPipeline(probabilityUtils, stopwatch, candidate, numOfTrainingRows);
+                            try
+                            {
+                                ProcessPipeline(probabilityUtils, stopwatch, candidate, numOfTrainingRows);
+                            }
+                            catch (Exception e)
+                            {
+                                File.AppendAllText($"{MyGlobals.DatasetName}_crash_dump", $"{candidate.Learner.PipelineNode} Crashed {e}\r\n");
+                                MyGlobals.FailedPipelineHashes.Add(candidate.Learner.PipelineNode.ToString());
+                                stopwatch.Stop();
+                            }
                         }
-                        catch (Exception e)
-                        {
-                            File.AppendAllText($"{MyGlobals.DatasetName}_crash_dump", $"{candidate.Learner.PipelineNode} Crashed {e}\r\n");
-                            MyGlobals.FailedPipelineHashes.Add(candidate.Learner.PipelineNode.ToString());
-                            stopwatch.Stop();
-                        }
+                    }
+                    catch (Exception e)
+                    {
+                        File.AppendAllText($"{MyGlobals.DatasetName}_crash_dump_before_runs", $"{e}\r\n");
                     }
                 }
             }
