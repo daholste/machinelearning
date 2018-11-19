@@ -559,6 +559,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 .Where(p => type.IsAssignableFrom(p) &&
                     MacroUtils.IsTrainerOfKind(p, trainerKind));
             trainerTypes = trainerTypes.Where(y => !typeof(GeneralizedAdditiveModelBinaryClassifier).Equals(y));
+            trainerTypes = trainerTypes.Where(y => !typeof(EnsembleBinaryClassifier).Equals(y));
+            trainerTypes = trainerTypes.Where(y => !typeof(OnlineGradientDescentRegressor).Equals(y));
+            trainerTypes = trainerTypes.Where(y => !typeof(FastTreeTweedieRegressor).Equals(y));
 
             foreach (var tt in trainerTypes)
             {
