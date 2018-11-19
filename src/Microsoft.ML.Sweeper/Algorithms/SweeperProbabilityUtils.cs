@@ -142,7 +142,10 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
             if (total <= Double.Epsilon)
             {
                 Console.WriteLine($"{total} {Double.Epsilon}");
-                weights.SetValue(1, 0, weights.Length);
+                for(var i = 0; i < weights.Length; i++)
+                {
+                    weights[i] = 1;
+                }
                 total = weights.Length;
             }
 
