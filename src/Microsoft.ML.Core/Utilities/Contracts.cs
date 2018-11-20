@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Threading;
 
 #if PRIVATE_CONTRACTS
@@ -770,6 +771,18 @@ namespace Microsoft.ML.Runtime
 
         private static void DbgFailCore(string msg, IExceptionContext ctx = null)
         {
+            var sb = new StringBuilder();
+            sb.Append("Debug fail: ");
+            if(!string.IsNullOrWhiteSpace(msg))
+            {
+                sb.Append(msg);
+            }
+            if(ctx != null)
+            {
+                sb.Append(ctx.ToString());
+            }
+            throw new Exception($"Debug fail: {msg} {ctx}");
+            /*
             var handler = _handler;
 
             if (handler != null)
@@ -778,6 +791,7 @@ namespace Microsoft.ML.Runtime
                 Debug.Fail(msg, ctx.ContextDescription);
             else
                 Debug.Fail(msg);
+                */
         }
 
         private static void DbgFail(IExceptionContext ctx = null)
