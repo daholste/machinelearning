@@ -98,8 +98,10 @@ namespace Microsoft.ML.Runtime.PipelineInference
         public static bool IsValidTransformsPipeline(long transformsBitMask, TransformInference.SuggestedTransform[] selectedAndFinalTransforms,
             TransformInference.SuggestedTransform[] allTransforms, AutoInference.DependencyMap dependencyMapping)
         {
+            return true;
+
             // If no transforms and none selected, valid.
-            if (transformsBitMask == 0 && allTransforms.Length == 0)
+            /*if (transformsBitMask == 0 && allTransforms.Length == 0)
                 return true;
 
             // If including transforms that aren't there, invalid pipeline
@@ -132,7 +134,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 return false;
 
             // Passed all tests
-            return true;
+            return true;*/
         }
 
         private static bool HasFinalFeatures(TransformInference.SuggestedTransform[] transforms,
