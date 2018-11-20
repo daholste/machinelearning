@@ -35,6 +35,7 @@ namespace Microsoft.ML.Runtime.Tools.Console
                 string validDataPath = $"{datasetsDir}{datasetName}_valid.csv";
                 string testDataPath = $"{datasetsDir}{datasetName}_test.csv";
 
+                labelColName = labelColName.Replace('.', '_');
                 var textLoaderArgs = RecipeInference.MyAutoMlInferTextLoaderArguments(env,
                         trainDataPath, labelColName);
                 textLoaderArgs.Column.First(c => c.Name == labelColName).Name = "Label";
