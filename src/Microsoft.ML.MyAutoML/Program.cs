@@ -62,7 +62,7 @@ namespace Microsoft.ML.Runtime.Tools.Console
 
                 AutoMlMlState amls = new AutoMlMlState(env, metric, rocketEngine, terminator, trainerKind,
                     trainData, validData);
-                var bestPipeline = amls.InferPipelines(10, 3, 100);
+                var bestPipeline = amls.InferPipelines(1, 3, 100);
 
                 bestPipeline.RunTrainTestExperiment(trainData,
                     testData, metric, trainerKind, out var testMetricVal, out var trainMetricVal);
