@@ -208,11 +208,13 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
         private RecipeInference.SuggestedRecipe.SuggestedLearner[] GetTopLearners(IEnumerable<PipelinePattern> history)
         {
-            var weights = LearnerHistoryToWeights(history.ToArray(), IsMaximizingMetric);
-            return weights.Select((w, i) => new { Weight = w, Index = i })
-                .OrderByDescending(x => x.Weight)
-                .Take(_topK)
-                .Select(t=>AvailableLearners[t.Index]).ToArray();
+            IEnumerable<PipelinePattern> sortedHistory = history.OrderBy(h => h.PerformanceSummary.MetricValue);
+            if(IsMaximizingMetric)
+            {
+                sortedHistory = sortedHistory.Reverse();
+            }
+            var topLearners = sortedHistory.Take(_topK).Select(h => h.Learner).ToArray();
+            return topLearners;
         }
 
         public override PipelinePattern[] GetNextCandidates(IEnumerable<PipelinePattern> history, int numCandidates, RoleMappedData dataRoles)
@@ -224,7 +226,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             switch (_currentStage)
             {
                 case (int)Stages.First:
-                    // First stage: Go through all learners once with default hyperparams and all transforms.
+                    // First stage: hGo through all learners once with default hyperparams and all transforms.
                     // If random initilization is used, generate number of requested initialization trials for
                     // this stage.
                     int numStageOneTrials = _randomInit ? _numInitPipelines : AvailableLearners.Length;
