@@ -225,7 +225,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             }
                             catch (Exception e)
                             {
-                                File.AppendAllText($"{MyGlobals.DatasetName}_crash_dump", $"{candidate.Learner.PipelineNode} Crashed {e}\r\n");
+                                File.AppendAllText($"{MyGlobals.OutputDir}/crash_dump1.txt", $"{candidate.Learner.PipelineNode} Crashed {e}\r\n");
                                 MyGlobals.FailedPipelineHashes.Add(candidate.Learner.PipelineNode.ToString());
                                 stopwatch.Stop();
                             }
@@ -233,7 +233,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     }
                     catch (Exception e)
                     {
-                        File.AppendAllText($"{MyGlobals.DatasetName}_crash_dump_before_runs", $"{e}\r\n");
+                        File.AppendAllText($"{MyGlobals.OutputDir}/crash_dump2.txt", $"{e}\r\n");
                     }
                 }
             }
@@ -281,7 +281,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 learnerStr = learnerStr.Replace("FastTreeBinaryClassifier", "FastTreeBinaryClassification");
                 learnerStr = learnerStr.Replace("FieldAwareFactorizationMachineBinaryClassifier", "FieldAwareFactorizationMachine");
                 var commandLineStr = $"{transformsSb.ToString()} tr={learnerStr}";
-                File.AppendAllText($"{MyGlobals.DatasetName}.tsv", $"{_sortedSampledElements.Count}\t{candidate.PerformanceSummary.MetricValue}\t{MyGlobals.Stopwatch.Elapsed}\t{commandLineStr}\r\n");
+                File.AppendAllText($"{MyGlobals.OutputDir}/output.tsv", $"{_sortedSampledElements.Count}\t{candidate.PerformanceSummary.MetricValue}\t{MyGlobals.Stopwatch.Elapsed}\t{commandLineStr}\r\n");
             }
 
             public void UpdateTerminator(ITerminator terminator)
@@ -466,7 +466,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 learnerStr = learnerStr.Replace("FastTreeBinaryClassifier", "FastTreeBinaryClassification");
                 learnerStr = learnerStr.Replace("FieldAwareFactorizationMachineBinaryClassifier", "FieldAwareFactorizationMachine");
                 var commandLineStr = $"{transformsSb.ToString()} tr={learnerStr}";
-                File.AppendAllText($"{MyGlobals.DatasetName}.tsv", $"{_sortedSampledElements.Count}\t{pipeline.PerformanceSummary.MetricValue}\t{MyGlobals.Stopwatch.Elapsed}\t{commandLineStr}\r\n");
+                File.AppendAllText($"{MyGlobals.OutputDir}/output.tsv", $"{_sortedSampledElements.Count}\t{pipeline.PerformanceSummary.MetricValue}\t{MyGlobals.Stopwatch.Elapsed}\t{commandLineStr}\r\n");
 
                 _history.Add(pipeline);
 

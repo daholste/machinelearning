@@ -17,28 +17,26 @@ namespace Microsoft.ML.Runtime.Tools.Console
         {
             var stopwatch = Stopwatch.StartNew();
 
-            var datasetName = "Benz";
-            var labelColName = "y";
-            var datasetsDir = @"C:\Datasets\";
+            //var datasetName = "Physics";
+            //var labelColName = "signal";
+            //var datasetsDir = @"D:\RealSplitDatasets\";
             var numIterations = 200;
             var trainerKind = MacroUtils.TrainerKinds.SignatureRegressorTrainer;
             var metricToOptimize = PipelineSweeperSupportedMetrics.Metrics.RSquared;
 
-            MyGlobals.DatasetName = datasetName;
+            MyGlobals.OutputDir = args[0];
             MyGlobals.Stopwatch = stopwatch;
 
             var dir = Directory.GetCurrentDirectory();
             using (var env = new ConsoleEnvironment())
             using (AssemblyLoadingUtils.CreateAssemblyRegistrar(env, dir))
             {
-                string trainDataPath = $"{datasetsDir}{datasetName}_train.csv";
-                string validDataPath = $"{datasetsDir}{datasetName}_valid.csv";
-                string testDataPath = $"{datasetsDir}{datasetName}_test.csv";
+                string trainDataPath = $"/data/train.csv";
+                string validDataPath = $"/data/valid.csv";
+                string testDataPath = $"/data/test.csv";
 
-                labelColName = labelColName.Replace('.', '_');
                 var textLoaderArgs = RecipeInference.MyAutoMlInferTextLoaderArguments(env,
-                        trainDataPath, labelColName);
-                textLoaderArgs.Column.First(c => c.Name == labelColName).Name = "Label";
+                        trainDataPath, "Label");
 
                 var trainData = ImportTextData.TextLoader(env, new ImportTextData.LoaderInput()
                 {
@@ -67,10 +65,10 @@ namespace Microsoft.ML.Runtime.Tools.Console
                 bestPipeline.RunTrainTestExperiment(trainData,
                     testData, metric, trainerKind, out var testMetricVal, out var trainMetricVal);
 
-                File.AppendAllText($"{datasetName}_test_metric", $"{testMetricVal}\r\n");
+                File.AppendAllText($"{MyGlobals.OutputDir}/test_metric.txt", $"{testMetricVal}\r\n");
             }
 
-            File.AppendAllText($"{datasetName}_time", $"{stopwatch.ElapsedMilliseconds}ms\r\n");
+            File.AppendAllText($"{MyGlobals.OutputDir}/time.txt", $"{stopwatch.ElapsedMilliseconds}ms\r\n");
         }
     }
 }
