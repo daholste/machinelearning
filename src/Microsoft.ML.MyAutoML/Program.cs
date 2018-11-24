@@ -27,7 +27,7 @@ namespace Microsoft.ML.Runtime.Tools.Console
             MyGlobals.OutputDir = args[0];
             MyGlobals.Stopwatch = stopwatch;
 
-            var dir = Directory.GetCurrentDirectory();
+            var dir = AppDomain.CurrentDomain.BaseDirectory;
             using (var env = new ConsoleEnvironment())
             using (AssemblyLoadingUtils.CreateAssemblyRegistrar(env, dir))
             {
