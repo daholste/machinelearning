@@ -7054,7 +7054,7 @@ namespace Microsoft.ML
             /// <summary>
             /// Dropout rate for tree regularization
             /// </summary>
-            [TlcModule.SweepableDiscreteParamAttribute("DropoutRate", new object[]{0f, 1E-09f, 0.05f, 0.1f, 0.2f})]
+            [TlcModule.SweepableDiscreteParamAttribute("DropoutRate", new object[]{0f})]
             public double DropoutRate { get; set; }
 
             /// <summary>
