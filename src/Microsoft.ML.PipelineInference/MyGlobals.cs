@@ -1,7 +1,9 @@
-﻿using System;
+﻿using Microsoft.ML.Runtime.EntryPoints;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using static Microsoft.ML.Runtime.PipelineInference.AutoInference;
 
 namespace Microsoft.ML.PipelineInference
 {
@@ -10,5 +12,6 @@ namespace Microsoft.ML.PipelineInference
         public static string OutputDir = ".";
         public static ISet<string> FailedPipelineHashes = new HashSet<string>();
         public static Stopwatch Stopwatch;
+        public static SortedList<double, IPredictorModel> BestModels = new SortedList<double, IPredictorModel>(new ReversedComparer<double>());
     }
 }

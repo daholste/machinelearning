@@ -43,7 +43,7 @@ namespace Microsoft.ML.Runtime.Data.IO
 
         internal const string Summary = "Writes data into a text file.";
 
-        private abstract class ValueWriter
+        public abstract class ValueWriter
         {
             public readonly int Source;
 

@@ -20,7 +20,7 @@ namespace Microsoft.ML.Legacy.Models
         {
         }
 
-        internal static List<BinaryClassificationMetrics> FromMetrics(IHostEnvironment env, IDataView overallMetrics, IDataView confusionMatrix, int confusionMatriceStartIndex = 0)
+        public static List<BinaryClassificationMetrics> FromMetrics(IHostEnvironment env, IDataView overallMetrics, IDataView confusionMatrix, int confusionMatriceStartIndex = 0)
         {
             Contracts.AssertValue(env);
             env.AssertValue(overallMetrics);

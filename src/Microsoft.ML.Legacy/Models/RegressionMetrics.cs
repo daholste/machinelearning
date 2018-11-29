@@ -20,7 +20,7 @@ namespace Microsoft.ML.Legacy.Models
         {
         }
 
-        internal static List<RegressionMetrics> FromOverallMetrics(IHostEnvironment env, IDataView overallMetrics)
+        public static List<RegressionMetrics> FromOverallMetrics(IHostEnvironment env, IDataView overallMetrics)
         {
             Contracts.AssertValue(env);
             env.AssertValue(overallMetrics);
@@ -122,6 +122,11 @@ namespace Microsoft.ML.Legacy.Models
             [ColumnName(ColumnNames.FoldIndex)]
             public string RowTag;
 #pragma warning restore 649 // never assigned
+        }
+
+        public static object FromOverallMetrics(object environment, object overallMetrics)
+        {
+            throw new NotImplementedException();
         }
     }
 }

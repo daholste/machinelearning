@@ -8,6 +8,7 @@ using System.Linq;
 using Microsoft.ML.Legacy;
 using Microsoft.ML.Runtime.EntryPoints;
 using Microsoft.ML.Runtime.Data;
+using Microsoft.ML.PipelineInference;
 
 namespace Microsoft.ML.Runtime.PipelineInference
 {
@@ -215,6 +216,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             var dataOutTraining = experiment.GetOutput(trainTestOutput.TrainingOverallMetrics);
             testMetricValue = AutoMlUtils.ExtractValueFromIdv(_env, dataOut, metric.Name);
             trainMetricValue = AutoMlUtils.ExtractValueFromIdv(_env, dataOutTraining, metric.Name);
+            MyGlobals.BestModels.Add(testMetricValue, experiment.GetOutput(trainTestOutput.PredictorModel));
         }
 
         public static PipelineResultRow[] ExtractResults(IHostEnvironment env, IDataView data,

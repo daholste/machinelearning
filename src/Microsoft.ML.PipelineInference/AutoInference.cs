@@ -37,7 +37,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             public override string ToString() => Name;
         }
 
-        private sealed class ReversedComparer<T> : IComparer<T>
+        public sealed class ReversedComparer<T> : IComparer<T>
         {
             public int Compare(T x, T y)
             {
