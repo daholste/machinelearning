@@ -113,7 +113,7 @@ namespace Microsoft.ML.Runtime.Tools.Console
             mergedTestData = ApplyTransformUtils.ApplyAllTransformsToData(env, mergedTrainData, mergedTestData);
             var transformed = model.Transform(mergedTestData);
             var metrics = ctx.Evaluate(transformed);
-            File.AppendAllText("ensembled", metrics.RSquared.ToString() + "\r\n");
+            File.AppendAllText($"{MyGlobals.OutputDir}/ensembled", metrics.RSquared.ToString() + "\r\n");
 
             /*var testLines = File.ReadAllLines(_testDataPath).ToList();
             var labelIdx = testLines[0].Split(',').ToList().FindIndex(c => c == "Label");
