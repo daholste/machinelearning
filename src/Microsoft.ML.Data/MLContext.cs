@@ -14,7 +14,7 @@ namespace Microsoft.ML
     /// The <see cref="MLContext"/> is a starting point for all ML.NET operations. It is instantiated by user,
     /// provides mechanisms for logging and entry points for training, prediction, model operations etc.
     /// </summary>
-    public sealed class MLContext : IHostEnvironment
+    public class MLContext : IHostEnvironment
     {
         // REVIEW: consider making LocalEnvironment and MLContext the same class instead of encapsulation.
         private readonly LocalEnvironment _env;

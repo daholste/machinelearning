@@ -99,10 +99,10 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return null;
         }
 
-        public static ColumnGroupingInference.GroupingColumn[] InferColumnPurposes(IChannel ch, IHost env, TextFileSample sample, TextFileContents.ColumnSplitResult splitResult,
+        public static ColumnGroupingInference.GroupingColumn[] InferColumnPurposes(IChannel ch, IHostEnvironment env, TextFileSample sample, TextFileContents.ColumnSplitResult splitResult,
             out bool hasHeader, string colLabelName = null)
         {
-            ch.Info("Detecting column types");
+           // ch.Info("Detecting column types");
             var typeInferenceResult = ColumnTypeInference.InferTextFileColumnTypes(env, sample,
                 new ColumnTypeInference.Arguments
                 {
@@ -115,11 +115,11 @@ namespace Microsoft.ML.Runtime.PipelineInference
             hasHeader = true;
             if (!typeInferenceResult.IsSuccess)
             {
-                ch.Error("Couldn't detect column types.");
+                //ch.Error("Couldn't detect column types.");
                 return null;
             }
 
-            ch.Info("Detecting column purposes");
+            //ch.Info("Detecting column purposes");
             var typedLoaderArgs = new TextLoader.Arguments
             {
                 Column = ColumnTypeInference.GenerateLoaderColumns(typeInferenceResult.Columns),
@@ -133,7 +133,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             var purposeInferenceResult = PurposeInference.InferPurposes(env, typedData,
                 Utils.GetIdentityPermutation(typedLoaderArgs.Column.Length), new PurposeInference.Arguments(),
                 colLabelName: colLabelName);
-            ch.Info("Detecting column grouping and generating column names");
+            //ch.Info("Detecting column grouping and generating column names");
 
             ColumnGroupingInference.GroupingColumn[] groupingResult = ColumnGroupingInference.InferGroupingAndNames(env, typeInferenceResult.HasHeader,
                 typeInferenceResult.Columns, purposeInferenceResult.Columns).Columns;

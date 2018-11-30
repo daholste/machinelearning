@@ -18,7 +18,7 @@ namespace Microsoft.ML
     /// "area" of machine learning. A subclass would represent a particular task in machine learning. The idea
     /// is that a user can instantiate that particular area, and get trainers and evaluators.
     /// </summary>
-    public abstract class TrainContextBase
+    public abstract partial class TrainContextBase
     {
         protected readonly IHost Host;
         internal IHostEnvironment Environment => Host;
@@ -433,11 +433,17 @@ namespace Microsoft.ML
         }
     }
 
+    public class AutoMlContext
+    {
+    }
+
     /// <summary>
     /// The central context for regression trainers.
     /// </summary>
-    public sealed class RegressionContext : TrainContextBase
+    public class RegressionContext : TrainContextBase
     {
+        public AutoMlContext AutoMl { get; }
+
         /// <summary>
         /// For trainers for performing regression.
         /// </summary>
