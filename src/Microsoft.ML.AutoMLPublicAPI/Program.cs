@@ -23,8 +23,10 @@ namespace Microsoft.ML.AutoMLPublicAPI
             // optionally, infer subcontext
             var inferredContext = mlContext.InferTrainContext(trainData);
 
-            // manually select context
+            // manually select subcontext
             var autoMlContext = mlContext.Regression.AutoMl;
+
+            // run AutoML
             var result = autoMlContext.InferPipeline(columns, trainData, validationData, testData, maxIterations: 10);
 
             //// can leverage Auto ML results to:
