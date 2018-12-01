@@ -1,5 +1,6 @@
 ﻿using Microsoft.ML.Runtime.Data;
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.ML.AutoMLPublicAPI
 {
@@ -8,38 +9,50 @@ namespace Microsoft.ML.AutoMLPublicAPI
         public static void Main(string[] args)
         {
             const string trainDataPath = @"C:\data\train.csv";
-            const string validationDataPath = @"C:\data\valid.csv";
             const string testDataPath = @"C:\data\test.csv";
 
-            // infer columns
             var mlContext = new MLContext();
-            var columns = mlContext.InferColumns(trainDataPath, label: "y");
+            TextLoader textLoader = new TextLoader(mlContext,
+                new TextLoader.Arguments()
+                {
+                    Separator = ",",
+                    HasHeader = true,
+                    Column = new[]
+                    {
+                        new TextLoader.Column("VendorId", DataKind.Text, 0),
+                        new TextLoader.Column("RateCode", DataKind.Text, 1),
+                        new TextLoader.Column("PassengerCount", DataKind.R4, 2),
+                        new TextLoader.Column("TripTime", DataKind.R4, 3),
+                        new TextLoader.Column("TripDistance", DataKind.R4, 4),
+                        new TextLoader.Column("PaymentType", DataKind.Text, 5),
+                        new TextLoader.Column("FareAmount", DataKind.R4, 6)
+                    }
+                });
 
             // load data
-            var trainData = mlContext.InferDataView(trainDataPath, columns);
-            var validationData = mlContext.InferDataView(validationDataPath, columns);
-            var testData = mlContext.InferDataView(testDataPath, columns);
+            var trainData = textLoader.Read(trainDataPath);
+            var testData = textLoader.Read(testDataPath);
 
-            // optionally, infer subcontext
-            var inferredContext = mlContext.InferTrainContext(trainData);
-
-            // manually select subcontext
-            var autoMlContext = mlContext.Regression.AutoMl;
+            var columnPurposes = new Dictionary<string, ColumnPurpose>()
+            {
+                { "VendorId", ColumnPurpose.Categorical },
+                { "RateCode", ColumnPurpose.Categorical },
+                { "PassengerCount", ColumnPurpose.Numerical},
+                { "TripTime", ColumnPurpose.Numerical},
+                { "TripDistance", ColumnPurpose.Numerical},
+                { "PaymentType", ColumnPurpose.Categorical},
+                { "FareAmount", ColumnPurpose.Label},
+            };
 
             // run AutoML
-            var result = autoMlContext.InferPipeline(columns, trainData, validationData, testData, maxIterations: 10);
+            var transform = mlContext.Transforms.CopyColumns("PaymentType", "PaymentType1");
+            var autoMlTrainer = mlContext.Regression.Trainers.Auto(columnPurposes, maxIterations: 10);
+            var pipeline = transform.Append(autoMlTrainer);
+            var model = pipeline.Fit(trainData);
 
-            //// can leverage Auto ML results to:
-
-            // (1) examine validation set results,
-            Console.WriteLine(result.ValidationResult.RSquared);
-
-            // (2) re-use trained model to predict test data, or
-            var trainedModel = result.TrainedModel;
-            var testDataResults = trainedModel.Transform(testData);
-
-            // (3) re-train winnig pipeline on new data,
-            var newTrainedModel = result.Estimator.Fit(validationData);
+            // apply AutoML results
+            var transformedOutput = model.Transform(testData);
+            var results = mlContext.Regression.Evaluate(transformedOutput);
         }
     }
 }

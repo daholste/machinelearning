@@ -281,7 +281,7 @@ namespace Microsoft.ML.Runtime.Data
         }
 
         [BestFriend]
-        internal static PrimitiveType FromKind(DataKind kind)
+        public static PrimitiveType FromKind(DataKind kind)
         {
             if (kind == DataKind.TX)
                 return TextType.Instance;

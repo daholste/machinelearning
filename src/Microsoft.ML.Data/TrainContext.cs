@@ -437,6 +437,10 @@ namespace Microsoft.ML
     {
     }
 
+    public class Auto
+    {
+    }
+
     /// <summary>
     /// The central context for regression trainers.
     /// </summary>
@@ -455,9 +459,11 @@ namespace Microsoft.ML
             Trainers = new RegressionTrainers(this);
         }
 
-        public sealed class RegressionTrainers : ContextInstantiatorBase
+        public class RegressionTrainers : ContextInstantiatorBase
         {
-            internal RegressionTrainers(RegressionContext ctx)
+            public Auto Auto { get; set; }
+
+            public RegressionTrainers(RegressionContext ctx)
                 : base(ctx)
             {
             }

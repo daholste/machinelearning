@@ -1,16 +1,15 @@
 ﻿using Microsoft.ML.Core.Data;
 using Microsoft.ML.Runtime;
 using Microsoft.ML.Runtime.Data;
+using Microsoft.ML.Runtime.Internal.Internallearn;
 using Microsoft.ML.Runtime.Learners;
 using Microsoft.ML.Runtime.PipelineInference;
-using Microsoft.ML.StaticPipe;
-using Microsoft.ML.Trainers;
+using Microsoft.ML.Runtime.Training;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using static Microsoft.ML.RegressionContext;
 using static Microsoft.ML.Runtime.PipelineInference.ColumnGroupingInference;
-using static Microsoft.ML.Runtime.PipelineInference.TextFileContents;
 
 namespace Microsoft.ML.AutoMLPublicAPI
 {
@@ -46,27 +45,123 @@ namespace Microsoft.ML.AutoMLPublicAPI
             return reader.Read(dataFilePath);
         }
 
-        public static PipelineInferenceResult<RegressionPredictionTransformer<LinearRegressionPredictor>> InferPipeline(this AutoMlContext autoMlContext, GroupingColumn[] columns,
-            IDataView trainData, IDataView validationData = null, IDataView testData = null,
+        public static AutoMlEngine Auto(this RegressionTrainers trainers, Dictionary<string, ColumnPurpose> columnPurposes,
             int? maxIterations = null)
         {
-            // label column transform
-            var labelColName = columns.First(c => c.Purpose == ColumnPurpose.Label).SuggestedName;
-            var transform = _mlContext.Transforms.CopyColumns(labelColName, "Label");
+            var mlContext = new MLContext();
+            var labelColName = columnPurposes.First(c => c.Value == ColumnPurpose.Label).Key;
 
-            var trainer = _mlContext.Regression.Trainers.StochasticDualCoordinateAscent(maxIterations: maxIterations);
-            var estimator = transform.Append(trainer);
+            var labelCol = new SchemaShape.Column(labelColName, SchemaShape.Column.VectorKind.Scalar, PrimitiveType.FromKind(DataKind.R4), false);
+            var featureCol = new SchemaShape.Column("TripDistance", SchemaShape.Column.VectorKind.Scalar, PrimitiveType.FromKind(DataKind.R4), false);
 
-            var model = estimator.Fit(trainData);
-            var transformedOutput = model.Transform(validationData);
-            var results = _mlContext.Regression.Evaluate(transformedOutput);
-            return new PipelineInferenceResult<RegressionPredictionTransformer<LinearRegressionPredictor>>()
+            return new AutoMlEngine(mlContext, featureCol, labelCol, columnPurposes, maxIterations);
+        }
+    }
+
+    public class AutoMlEngine : TrainerEstimatorBase<AutoMlISingleFeaturePredictionTransformer, AutoMlPredictor>
+    {
+        private Dictionary<string, ColumnPurpose> _columnPurposes;
+        private int? _maxIterations;
+
+        public AutoMlEngine(IHostEnvironment host,
+            SchemaShape.Column feature,
+            SchemaShape.Column label,
+            Dictionary<string, ColumnPurpose> columnPurposes, int? maxIterations = null,
+            SchemaShape.Column weight = null) : base(BuildHost(host), feature, label, weight)
+        {
+            _columnPurposes = columnPurposes;
+            _maxIterations = maxIterations;
+        }
+
+        private static IHost BuildHost(IHostEnvironment env)
+        {
+            return env.Register("hi");
+        }
+
+        public override TrainerInfo Info => new TrainerInfo();
+
+        public override PredictionKind PredictionKind => PredictionKind.Regression;
+
+        protected override SchemaShape.Column[] GetOutputColumnsCore(SchemaShape inputSchema)
+        {
+            return new[]
             {
-                Estimator = estimator,
-                ValidationResult = results,
-                TestResult = null,
-                TrainedModel = model
+                new SchemaShape.Column(DefaultColumnNames.Score, SchemaShape.Column.VectorKind.Scalar, NumberType.R4, false, new SchemaShape(MetadataUtils.GetTrainerOutputMetadata()))
             };
+        }
+
+        protected override AutoMlISingleFeaturePredictionTransformer MakeTransformer(AutoMlPredictor predictor, Schema trainSchema)
+        {
+            var mlContext = new MLContext();
+
+            var labelColName = _columnPurposes.First(c => c.Value == ColumnPurpose.Label).Key;
+            var transform1 = mlContext.Transforms.CopyColumns(labelColName, "Label");
+            var transform2 = transform1.Append(mlContext.Transforms.Concatenate("Features",
+                new string[] { "TripDistance" }));
+            //new string[] { "VendorId", "RateCode", "TripTime", "TripDistance", "PaymentType"}));
+
+            var trainer = mlContext.Regression.Trainers.StochasticDualCoordinateAscent(maxIterations: _maxIterations);
+            var estimator = transform2.Append(trainer);
+            return new AutoMlISingleFeaturePredictionTransformer(estimator);
+        }
+
+        protected override AutoMlPredictor TrainModelCore(TrainContext trainContext)
+        {
+            return new AutoMlPredictor(trainContext);
+        }
+
+        protected override RoleMappedData MakeRoles(IDataView data)
+        {
+            var labelColName = _columnPurposes.First(c => c.Value == ColumnPurpose.Label).Key;
+            return new RoleMappedData(data, label: labelColName, feature: null, weight: WeightColumn?.Name);
+        }
+    }
+
+    public class AutoMlPredictor : IPredictorProducing<float>
+    {
+        public PredictionKind PredictionKind => throw new NotImplementedException();
+        public TrainContext TrainContext { get; private set; }
+
+        public AutoMlPredictor(TrainContext trainContext)
+        {
+            TrainContext = trainContext;
+        }
+    }
+
+    public class AutoMlISingleFeaturePredictionTransformer : ISingleFeaturePredictionTransformer<AutoMlPredictor>
+    {
+        private IEstimator<ITransformer> _estimator;
+        private Schema _schema;
+
+        public AutoMlISingleFeaturePredictionTransformer(IEstimator<ITransformer> estimator)
+        {
+            _estimator = estimator;
+        }
+
+        public string FeatureColumn => throw new NotImplementedException();
+
+        public ColumnType FeatureColumnType => throw new NotImplementedException();
+
+        public AutoMlPredictor Model => throw new NotImplementedException();
+
+        public bool IsRowToRowMapper => throw new NotImplementedException();
+
+        public Schema GetOutputSchema(Schema inputSchema)
+        {
+            return _schema;
+        }
+
+        public IRowToRowMapper GetRowToRowMapper(Schema inputSchema)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IDataView Transform(IDataView input)
+        {
+            var model = _estimator.Fit(input);
+            var output = model.Transform(input);
+            _schema = output.Schema;
+            return output;
         }
     }
 
@@ -80,5 +175,12 @@ namespace Microsoft.ML.AutoMLPublicAPI
 
     public class PipelineInferenceResult<T> : IPipelineInferenceResult<T> where T : class, ITransformer
     {
+    }
+
+    public enum ColumnPurpose
+    {
+        Label,
+        Categorical,
+        Numerical
     }
 }
