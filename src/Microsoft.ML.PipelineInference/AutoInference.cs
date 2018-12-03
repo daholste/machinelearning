@@ -330,7 +330,17 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     _availableTransforms.ToArray(), _availableLearners.ToArray());
             }
 
-            public PipelinePattern InferPipelines(int numTransformLevels, int batchSize, int numOfTrainingRows)
+            public PipelinePattern InferPipeline(int numTransformLevels, int batchSize, int numOfTrainingRows)
+            {
+                var pipelines = InferPipelines(numTransformLevels, batchSize, numOfTrainingRows);
+                if(pipelines == null || !pipelines.Any())
+                {
+                    return null;
+                }
+                return pipelines.First();
+            }
+
+            public IEnumerable<PipelinePattern> InferPipelines(int numTransformLevels, int batchSize, int numOfTrainingRows)
             {
                 _env.AssertValue(_trainData, nameof(_trainData), "Must set training data prior to calling method.");
                 _env.AssertValue(_testData, nameof(_testData), "Must set test data prior to calling method.");
@@ -347,7 +357,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     MainLearningLoop(batchSize, numOfTrainingRows);
 
                     // Return best pipeline seen
-                    return _sortedSampledElements.Count > 0 ? _sortedSampledElements.First().Value : null;
+                    return _sortedSampledElements.Values;
                 }
             }
 
@@ -532,7 +542,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             int numOfRows = (int)(trainData.GetRowCount(false) ?? 1000);
             AutoMlMlState amls = new AutoMlMlState(env, metric, autoMlEngine, terminator, trainerKind, trainData, testData);
-            bestPipeline = amls.InferPipelines(numTransformLevels, batchSize, numOfRows);
+            bestPipeline = amls.InferPipeline(numTransformLevels, batchSize, numOfRows);
             return amls;
         }
 
@@ -558,7 +568,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             var splitOutput = TrainTestSplit.Split(env, new TrainTestSplit.Input { Data = data, Fraction = 0.8f });
             AutoMlMlState amls = new AutoMlMlState(env, metric, autoMlEngine, terminator, trainerKind,
                 splitOutput.TrainData.Take(numOfSampleRows), splitOutput.TestData.Take(numOfSampleRows));
-            bestPipeline = amls.InferPipelines(numTransformLevels, batchSize, numOfSampleRows);
+            bestPipeline = amls.InferPipeline(numTransformLevels, batchSize, numOfSampleRows);
             return amls;
         }
 
@@ -572,7 +582,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             var splitOutput = TrainTestSplit.Split(env, new TrainTestSplit.Input { Data = data, Fraction = 0.8f });
             AutoMlMlState amls = new AutoMlMlState(env, metric, autoMlEngine, terminator, trainerKind,
                 splitOutput.TrainData.Take(numOfSampleRows), splitOutput.TestData.Take(numOfSampleRows));
-            bestPipeline = amls.InferPipelines(numTransformLevels, batchSize, numOfSampleRows);
+            bestPipeline = amls.InferPipeline(numTransformLevels, batchSize, numOfSampleRows);
             return amls;
         }
     }

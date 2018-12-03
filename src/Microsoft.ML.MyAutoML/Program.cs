@@ -6,6 +6,7 @@ using Microsoft.ML.Runtime.Data.IO;
 using Microsoft.ML.Runtime.EntryPoints;
 using Microsoft.ML.Runtime.Internal.Calibration;
 using Microsoft.ML.Runtime.PipelineInference;
+using Microsoft.ML.Transforms;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -25,7 +26,7 @@ namespace Microsoft.ML.Runtime.Tools.Console
         private static string _trainValidDataPath = $"/data/train_valid.csv";
         private static string _labelColName = "Label";
 
-        public static void Main(string[] args)
+        public static void MainSafe(string[] args)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -75,17 +76,31 @@ namespace Microsoft.ML.Runtime.Tools.Console
 
                 AutoMlMlState amls = new AutoMlMlState(env, metric, rocketEngine, terminator, trainerKind,
                     trainData, validData);
-                var bestPipeline = amls.InferPipelines(1, 3, 100);
+                var bestPipelines = amls.InferPipelines(1, 3, 100);
+                var bestPipeline = bestPipelines.First();
 
                 bestPipeline.RunTrainTestExperiment(trainData,
                     testData, metric, trainerKind, out var testMetricVal, out var trainMetricVal);
 
-                Ensemble(env, trainData, testData);
+                Ensemble(env, trainData, validData, testData, bestPipelines, metric, trainerKind);
 
                 File.AppendAllText($"{MyGlobals.OutputDir}/test_metric.txt", $"{testMetricVal}\r\n");
             }
 
             File.AppendAllText($"{MyGlobals.OutputDir}/time.txt", $"{stopwatch.ElapsedMilliseconds}ms\r\n");
+        }
+
+        public static void Main(string[] args)
+        {
+            MainSafe(args);
+            try
+            {
+                MainSafe(args);
+            }
+            catch(Exception ex)
+            {
+                System.Console.WriteLine($"Fatal exception: {ex}");
+            }
         }
 
         private static void MergeTrainValidateDatasets()
@@ -98,20 +113,65 @@ namespace Microsoft.ML.Runtime.Tools.Console
             File.AppendAllLines(_trainValidDataPath, validLines.Skip(1));
         }
 
-        private static void Ensemble(IHostEnvironment env, IDataView trainData, IDataView testData)
+        private static void Ensemble(IHostEnvironment env, IDataView trainData, IDataView validData, IDataView testData,
+            IEnumerable<PipelinePattern> topPipelines, SupportedMetric metric, MacroUtils.TrainerKinds trainerKind)
         {
             var ch = env.Start("hi");
             //var numEnsembles = MyGlobals.BestModels.Count() / 10;
-            var numEnsembles = 20;
-            var topModels = MyGlobals.BestModels.Take(numEnsembles).Select(m => m.Value);
-            var mergedTrainData = CreateMergedData(env, trainData, _trainDataPath, "trainMerged", topModels);
-            var ctx = new RegressionContext(env);
-            var trainer = ctx.Trainers.StochasticDualCoordinateAscent();
-            TrainUtils.AddNormalizerIfNeeded(env, ch, trainer, ref mergedTrainData, "Features", Data.NormalizeOption.Auto);
-            var model = trainer.Fit(mergedTrainData);
-            var mergedTestData = CreateMergedData(env, testData, _testDataPath, "testMerged", topModels);
-            mergedTestData = ApplyTransformUtils.ApplyAllTransformsToData(env, mergedTrainData, mergedTestData);
-            var transformed = model.Transform(mergedTestData);
+            var ensembleCount = 10;
+            var numFolds = 5;
+
+            var topTrainedModels = MyGlobals.BestModels.Take(ensembleCount).Select(m => m.Value);
+
+            var splitOutput = CVSplit.Split(env, new CVSplit.Input { Data = trainData, NumFolds = numFolds });
+
+            var trainMergedFilePath = "trainMerged";
+            var validMergedFilePath = "validMerged";
+            var testMergedFilePath = "testMerged";
+
+            var splitScoredTrainData = new List<IDataView>();
+
+            for(var i = 0; i < numFolds; i++)
+            {
+                System.Console.WriteLine($"Starting ensembling fold {i}");
+                var splitTrainData = splitOutput.TrainData[i];
+                var splitTestData = splitOutput.TestData[i];
+
+                var trainedModels = new List<IPredictorModel>();
+                for (var  j = 0; j < ensembleCount; j++)
+                {
+                    System.Console.WriteLine($"Ensembling fold {i}, training model {j}");
+                    var topPipeline = topPipelines.ElementAt(j);
+                    var trainedModel = topPipeline.RunTrainTestExperiment(splitTrainData, splitTestData, metric, trainerKind,
+                        out var _1, out var _2);
+                    trainedModels.Add(trainedModel);
+                }
+
+                var scoredTrainDataFold = CreateMergedData(env, splitTestData, trainMergedFilePath + i, trainedModels);
+                splitScoredTrainData.Add(scoredTrainDataFold);
+            }
+
+            WriteDataToFile(env, splitScoredTrainData, trainMergedFilePath);
+            var scoredTrainData = LoadDataFromFile(env, trainMergedFilePath, _labelColName);
+            var scoredValidData = CreateMergedData(env, validData, validMergedFilePath, topTrainedModels);
+            var scoredTestData = CreateMergedData(env, testData, testMergedFilePath, topTrainedModels);
+
+            var rocketEngine = new RocketEngine(env, new RocketEngine.Arguments() { });
+            var terminator = new IterationTerminator(50);
+            AutoMlMlState amls = new AutoMlMlState(env, metric, rocketEngine, terminator, trainerKind,
+                    scoredTrainData, scoredValidData);
+            var bestPipelines = amls.InferPipelines(1, 3, 100);
+            var bestPipeline = bestPipelines.First();
+            bestPipeline.RunTrainTestExperiment(scoredTrainData,
+                    scoredTestData, metric, trainerKind, out var testMetricVal, out var trainMetricVal);
+            File.AppendAllText($"{MyGlobals.OutputDir}/ensembled", testMetricVal + "\r\n");
+
+            /*var ctx = new RegressionContext(env);
+            var trainer = ctx.Trainers.FastTree(numLeaves: 2, minDatapointsInLeaves: 1, numTrees: 200);
+            TrainUtils.AddNormalizerIfNeeded(env, ch, trainer, ref scoredTrainData, "Features", Data.NormalizeOption.Auto);
+            var model = trainer.Fit(scoredTrainData);
+            scoredTestData = ApplyTransformUtils.ApplyAllTransformsToData(env, scoredTestData, scoredTestData);
+            var transformed = model.Transform(scoredTestData);
             var metrics = ctx.Evaluate(transformed);
             File.AppendAllText($"{MyGlobals.OutputDir}/ensembled", metrics.RSquared.ToString() + "\r\n");
 
@@ -140,7 +200,7 @@ namespace Microsoft.ML.Runtime.Tools.Console
         }
 
         private static IDataView CreateMergedData(IHostEnvironment env, IDataView data,
-            string dataFilePath, string tmpFilePath, IEnumerable<IPredictorModel> topModels)
+            string filePath, IEnumerable<IPredictorModel> topModels)
         {
             var scoresForTopModels = new List<IList<string>>();
             foreach (var topModel in topModels)
@@ -148,13 +208,16 @@ namespace Microsoft.ML.Runtime.Tools.Console
                 var scores = Score(env, data, topModel, MacroUtils.TrainerKinds.SignatureRegressorTrainer);
                 scoresForTopModels.Add(scores);
             }
+
+            var tmpFilePath = "tmpFile";
+            WriteDataToFile(env, data, tmpFilePath);
+            var dataLines = File.ReadAllLines(tmpFilePath);
             File.Delete(tmpFilePath);
-            var dataLines = File.ReadAllLines(dataFilePath);
             using (var tmpFile = new StreamWriter(File.OpenWrite(tmpFilePath)))
             {
                 var headers = dataLines[0];
-                //var headersSb = new StringBuilder(headers);
-                var headersSb = new StringBuilder("Label");
+                var headersSb = new StringBuilder(headers);
+                //var headersSb = new StringBuilder("Label");
                 for (var i = 0; i < scoresForTopModels.Count(); i++)
                 {
                     headersSb.Append(",");
@@ -170,26 +233,81 @@ namespace Microsoft.ML.Runtime.Tools.Console
                     var sb = new StringBuilder();
 
                     var dataLine = dataLines[i];
-                    //sb.Append(dataLine);
-                    sb.Append(dataLine.Split(",")[labelIdx]);
+                    sb.Append(dataLine);
+                    //sb.Append(dataLine.Split(",")[labelIdx]);
                     for (var j = 0; j < scoresForTopModels.Count(); j++)
-                    {
+                     {
                         sb.Append(",");
                         sb.Append(scoresForTopModels[j][i-1]);
                     }
                     tmpFile.WriteLine(sb.ToString());
                 }
             }
+            var tmpData = LoadDataFromFile(env, tmpFilePath, _labelColName);
+            WriteDataToFile(env, tmpData, filePath);
+            return LoadDataFromFile(env, filePath, _labelColName);
+        }
 
-            var textLoaderArgs = RecipeInference.MyAutoMlInferTextLoaderArguments(env,
-                        tmpFilePath, _labelColName);
-            var mergedTrainData = ImportTextData.TextLoader(env, new ImportTextData.LoaderInput()
+        private static IDataView LoadDataFromFile(IHostEnvironment env, string filePath, string labelColName)
+        {
+            var textLoaderArgs = RecipeInference.MyAutoMlInferTextLoaderArguments(env, filePath, _labelColName);
+            var dataView = ImportTextData.TextLoader(env, new ImportTextData.LoaderInput()
             {
-                InputFile = new SimpleFileHandle(env, tmpFilePath, false, false),
+                InputFile = new SimpleFileHandle(env, filePath, false, false),
                 Arguments = textLoaderArgs
             }).Data;
+            return dataView;
+        }
 
-            return mergedTrainData;
+        private static void WriteDataToFile(IHostEnvironment env, IDataView data, string path)
+        {
+            WriteDataToFile(env, new [] { data }, path);
+        }
+
+        private static void WriteDataToFile(IHostEnvironment env, IEnumerable<IDataView> dataViews, string path)
+        {
+            var firstDataView = dataViews.First();
+            var cols = firstDataView.Schema.GetColumns();
+            var orderedCols = cols.OrderBy(c => c.column.Name).Select(c => c.index);
+            var numCols = orderedCols.Count();
+
+            File.Delete(path);
+            using (var streamWriter = new StreamWriter(path))
+            {
+                for (var i = 0; i < dataViews.Count(); i++)
+                {
+                    var data = dataViews.ElementAt(i);
+                    var cursor = data.GetRowCursor((c) => true);
+                    var pipes = new ValueWriter[numCols];
+                    for (int j = 0; j < numCols; j++)
+                    {
+                        var col = orderedCols.ElementAt(j);
+                        pipes[j] = ValueWriter.Create(cursor, col, ',');
+                    }
+
+                    if (i == 0)
+                    {
+                        var headersSb = new StringBuilder();
+                        Action<StringBuilder, int> headerAppendFunc = (sb, n) => headersSb.Append("," + sb);
+                        for (int k = 0; k < numCols; k++)
+                        {
+                            pipes[k].WriteHeader(headerAppendFunc, out var length);
+                        }
+                        streamWriter.WriteLine(headersSb.Remove(0, 1));
+                    }
+
+                    while (cursor.MoveNext())
+                    {
+                        var rowSb = new StringBuilder();
+                        Action<StringBuilder, int> appendFunc = (sb, n) => rowSb.Append("," + sb);
+                        for (int k = 0; k < numCols; k++)
+                        {
+                            pipes[k].WriteData(appendFunc, out var length);
+                        }
+                        streamWriter.WriteLine(rowSb.Remove(0, 1));
+                    }
+                }
+            }
         }
 
         private static string CubeRoot(string s)

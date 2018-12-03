@@ -9,6 +9,7 @@ using Microsoft.ML.Legacy;
 using Microsoft.ML.Runtime.EntryPoints;
 using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.PipelineInference;
+using Microsoft.ML.Legacy.Models;
 
 namespace Microsoft.ML.Runtime.PipelineInference
 {
@@ -205,7 +206,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// <summary>
         /// Runs a train-test experiment on the current pipeline, through entrypoints.
         /// </summary>
-        public void RunTrainTestExperiment(IDataView trainData, IDataView testData,
+        public IPredictorModel RunTrainTestExperiment(IDataView trainData, IDataView testData,
             SupportedMetric metric, MacroUtils.TrainerKinds trainerKind, out double testMetricValue,
             out double trainMetricValue)
         {
@@ -216,7 +217,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
             var dataOutTraining = experiment.GetOutput(trainTestOutput.TrainingOverallMetrics);
             testMetricValue = AutoMlUtils.ExtractValueFromIdv(_env, dataOut, metric.Name);
             trainMetricValue = AutoMlUtils.ExtractValueFromIdv(_env, dataOutTraining, metric.Name);
-            MyGlobals.BestModels.Add(testMetricValue, experiment.GetOutput(trainTestOutput.PredictorModel));
+            while(MyGlobals.BestModels.ContainsKey(testMetricValue))
+            {
+                testMetricValue -= 0.000000000000001;
+            }
+            MyGlobals.BestModels.Add(testMetricValue - Double.Epsilon, experiment.GetOutput(trainTestOutput.PredictorModel));
+            return experiment.GetOutput(trainTestOutput.PredictorModel);
         }
 
         public static PipelineResultRow[] ExtractResults(IHostEnvironment env, IDataView data,

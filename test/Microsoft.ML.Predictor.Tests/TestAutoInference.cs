@@ -50,7 +50,7 @@ namespace Microsoft.ML.Runtime.RunTests
 
                 // Resume learning
                 amls.UpdateTerminator(new IterationTerminator(numIterations));
-                bestPipeline = amls.InferPipelines(numTransformLevels, batchSize, numOfSampleRows);
+                bestPipeline = amls.InferPipeline(numTransformLevels, batchSize, numOfSampleRows);
                 env.Check(amls.GetAllEvaluatedPipelines().Length == numIterations);
 
                 // Use best pipeline for another task
@@ -173,7 +173,7 @@ namespace Microsoft.ML.Runtime.RunTests
 
                 AutoMlMlState amls = new AutoMlMlState(env, metric, rocketEngine, terminator, trainerKind,
                     trainData, validData);
-                var bestPipeline = amls.InferPipelines(10, 3, 100);
+                var bestPipeline = amls.InferPipeline(10, 3, 100);
 
                 bestPipeline.RunTrainTestExperiment(trainData,
                     validData, metric, trainerKind, out var testMetricVal, out var trainMetricVal);
@@ -224,7 +224,7 @@ namespace Microsoft.ML.Runtime.RunTests
                 amls.UpdateTerminator(new IterationTerminator(numIterations + 1));
 
                 // Do learning. Only retained learner should be left in all pipelines.
-                bestPipeline = amls.InferPipelines(numTransformLevels, batchSize, numOfSampleRows);
+                bestPipeline = amls.InferPipeline(numTransformLevels, batchSize, numOfSampleRows);
 
                 // Make sure all pipelines have retained learner
                 Assert.True(amls.GetAllEvaluatedPipelines().All(p => p.Learner.LearnerName == learners[0].LearnerName));
@@ -260,7 +260,7 @@ namespace Microsoft.ML.Runtime.RunTests
                 amls.UpdateTerminator(new IterationTerminator(numIterations + 1));
 
                 // Do learning. Only retained learner should be left in all pipelines.
-                bestPipeline = amls.InferPipelines(numTransformLevels, batchSize, numOfSampleRows);
+                bestPipeline = amls.InferPipeline(numTransformLevels, batchSize, numOfSampleRows);
 
                 // Make sure hyperparameter value did not change
                 Assert.NotNull(bestPipeline);
