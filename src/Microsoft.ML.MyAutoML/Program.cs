@@ -26,16 +26,37 @@ namespace Microsoft.ML.Runtime.Tools.Console
         private static string _trainValidDataPath = $"/data/train_valid.csv";
         private static string _labelColName = "Label";
 
+        private const int NumIterations = 200;
+        private const int EnsembleSize = 10;
+        private const int NumAutoMlItersForEnsembledDataset = 50;
+
         public static void MainSafe(string[] args)
         {
-            var stopwatch = Stopwatch.StartNew();
+            // get trainer kind / problem type
+            MacroUtils.TrainerKinds trainerKind;
+            switch (args[1])
+            {
+                case "regression":
+                    trainerKind = MacroUtils.TrainerKinds.SignatureRegressorTrainer;
+                    break;
+                case "binaryclassification":
+                    trainerKind = MacroUtils.TrainerKinds.SignatureBinaryClassifierTrainer;
+                    break;
+                case "multiclassclassification":
+                    trainerKind = MacroUtils.TrainerKinds.SignatureMultiClassClassifierTrainer;
+                    break;
+                default:
+                    throw new Exception("unsupported problem type");
+            }
 
-            //var datasetName = "Physics";
-            //var labelColName = "signal";
-            //var datasetsDir = @"D:\RealSplitDatasets\";
-            var numIterations = 200;
-            var trainerKind = MacroUtils.TrainerKinds.SignatureRegressorTrainer;
-            var metricToOptimize = PipelineSweeperSupportedMetrics.Metrics.RSquared;
+            // get metric to optimize
+            var metricToOptimize = PipelineSweeperSupportedMetrics.Metrics.Accuracy;
+            if (trainerKind == MacroUtils.TrainerKinds.SignatureRegressorTrainer)
+            {
+                metricToOptimize = PipelineSweeperSupportedMetrics.Metrics.RSquared;
+            }
+
+            var stopwatch = Stopwatch.StartNew();
 
             MyGlobals.OutputDir = args[0];
             MyGlobals.Stopwatch = stopwatch;
@@ -72,7 +93,7 @@ namespace Microsoft.ML.Runtime.Tools.Console
 
                 var metric = PipelineSweeperSupportedMetrics.GetSupportedMetric(metricToOptimize);
                 var rocketEngine = new RocketEngine(env, new RocketEngine.Arguments() { });
-                var terminator = new IterationTerminator(numIterations);
+                var terminator = new IterationTerminator(NumIterations);
 
                 AutoMlMlState amls = new AutoMlMlState(env, metric, rocketEngine, terminator, trainerKind,
                     trainData, validData);
@@ -92,7 +113,6 @@ namespace Microsoft.ML.Runtime.Tools.Console
 
         public static void Main(string[] args)
         {
-            MainSafe(args);
             try
             {
                 MainSafe(args);
@@ -116,19 +136,19 @@ namespace Microsoft.ML.Runtime.Tools.Console
         private static void Ensemble(IHostEnvironment env, IDataView trainData, IDataView validData, IDataView testData,
             IEnumerable<PipelinePattern> topPipelines, SupportedMetric metric, MacroUtils.TrainerKinds trainerKind)
         {
+            var topTrainedModels = MyGlobals.BestModels.Select(m => m.Value);
+
+            var scoredValidData = CreateMergedData(env, validData, "validMerged", topTrainedModels);
+            var scoredTestData = CreateMergedData(env, testData, "testMerged", topTrainedModels);
+
+            /*
             var ch = env.Start("hi");
-            //var numEnsembles = MyGlobals.BestModels.Count() / 10;
-            var ensembleCount = 10;
             var numFolds = 5;
 
-            var topTrainedModels = MyGlobals.BestModels.Take(ensembleCount).Select(m => m.Value);
-
             var splitOutput = CVSplit.Split(env, new CVSplit.Input { Data = trainData, NumFolds = numFolds });
-
             var trainMergedFilePath = "trainMerged";
             var validMergedFilePath = "validMerged";
             var testMergedFilePath = "testMerged";
-
             var splitScoredTrainData = new List<IDataView>();
 
             for(var i = 0; i < numFolds; i++)
@@ -138,7 +158,7 @@ namespace Microsoft.ML.Runtime.Tools.Console
                 var splitTestData = splitOutput.TestData[i];
 
                 var trainedModels = new List<IPredictorModel>();
-                for (var  j = 0; j < ensembleCount; j++)
+                for (var  j = 0; j < EnsembleSize; j++)
                 {
                     System.Console.WriteLine($"Ensembling fold {i}, training model {j}");
                     var topPipeline = topPipelines.ElementAt(j);
@@ -157,14 +177,14 @@ namespace Microsoft.ML.Runtime.Tools.Console
             var scoredTestData = CreateMergedData(env, testData, testMergedFilePath, topTrainedModels);
 
             var rocketEngine = new RocketEngine(env, new RocketEngine.Arguments() { });
-            var terminator = new IterationTerminator(50);
+            var terminator = new IterationTerminator(NumAutoMlItersForEnsembledDataset);
             AutoMlMlState amls = new AutoMlMlState(env, metric, rocketEngine, terminator, trainerKind,
                     scoredTrainData, scoredValidData);
             var bestPipelines = amls.InferPipelines(1, 3, 100);
             var bestPipeline = bestPipelines.First();
             bestPipeline.RunTrainTestExperiment(scoredTrainData,
                     scoredTestData, metric, trainerKind, out var testMetricVal, out var trainMetricVal);
-            File.AppendAllText($"{MyGlobals.OutputDir}/ensembled", testMetricVal + "\r\n");
+            File.AppendAllText($"{MyGlobals.OutputDir}/ensembled", testMetricVal + "\r\n");*/
 
             /*var ctx = new RegressionContext(env);
             var trainer = ctx.Trainers.FastTree(numLeaves: 2, minDatapointsInLeaves: 1, numTrees: 200);
@@ -216,8 +236,8 @@ namespace Microsoft.ML.Runtime.Tools.Console
             using (var tmpFile = new StreamWriter(File.OpenWrite(tmpFilePath)))
             {
                 var headers = dataLines[0];
-                var headersSb = new StringBuilder(headers);
-                //var headersSb = new StringBuilder("Label");
+                //var headersSb = new StringBuilder(headers);
+                var headersSb = new StringBuilder("Label");
                 for (var i = 0; i < scoresForTopModels.Count(); i++)
                 {
                     headersSb.Append(",");
@@ -233,8 +253,8 @@ namespace Microsoft.ML.Runtime.Tools.Console
                     var sb = new StringBuilder();
 
                     var dataLine = dataLines[i];
-                    sb.Append(dataLine);
-                    //sb.Append(dataLine.Split(",")[labelIdx]);
+                    //sb.Append(dataLine);
+                    sb.Append(dataLine.Split(",")[labelIdx]);
                     for (var j = 0; j < scoresForTopModels.Count(); j++)
                      {
                         sb.Append(",");
@@ -326,7 +346,7 @@ namespace Microsoft.ML.Runtime.Tools.Console
                 PredictorModel = new Var<IPredictorModel> { VarName = "model" },
             };
             var scoreOutput = experiment.Add(scoreInput);
-            var evalInput = new Legacy.Models.RegressionEvaluator
+            var evalInput = new Legacy.Models.BinaryClassificationEvaluator
             {
                 Data = scoreOutput.ScoredData
             };
@@ -338,7 +358,7 @@ namespace Microsoft.ML.Runtime.Tools.Console
             experiment.Run();
 
             var scoredData = experiment.GetOutput(evalOutput.PerInstanceMetrics);
-            var scores = GetColumnValues(scoredData, "Score");
+            var scores = GetColumnValues(scoredData, "Probability");
             return scores;
             /*if (trainerKind == MacroUtils.TrainerKinds.SignatureBinaryClassifierTrainer)
             {
