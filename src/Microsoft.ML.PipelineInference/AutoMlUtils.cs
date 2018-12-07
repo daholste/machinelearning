@@ -9,7 +9,13 @@ using System.Reflection;
 using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.Runtime.EntryPoints;
 using Microsoft.ML.Runtime.EntryPoints.JsonUtils;
+using Microsoft.ML.Runtime.Learners;
+using Microsoft.ML.Runtime.LightGBM;
 using Microsoft.ML.Runtime.Sweeper;
+using Microsoft.ML.Trainers;
+using Microsoft.ML.Trainers.FastTree;
+using Microsoft.ML.Trainers.Online;
+using Microsoft.ML.Trainers.SymSgd;
 
 namespace Microsoft.ML.Runtime.PipelineInference
 {
@@ -340,31 +346,80 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return mapping;
         }
 
+        public static TlcModule.SweepableParamAttribute[] GetSweepRangesNewApi(string learnerName)
+        {
+            Type argsType = null;
+            if (learnerName == "AveragedPerceptronBinaryClassifier")
+            {
+                argsType = typeof(AveragedPerceptronTrainer.Arguments);
+            }
+            else if (learnerName == "FastForestBinaryClassifier")
+            {
+                argsType = typeof(FastForestClassification.Arguments);
+            }
+            else if (learnerName == "FastTreeBinaryClassifier")
+            {
+                argsType = typeof(FastTreeBinaryClassificationTrainer.Arguments);
+            }
+            else if (learnerName == "LightGbmBinaryClassifier")
+            {
+                argsType = typeof(LightGbmArguments);
+            }
+            else if (learnerName == "LinearSvmBinaryClassifier")
+            {
+                argsType = typeof(LinearSvm.Arguments);
+            }
+            else if (learnerName == "LogisticRegressionBinaryClassifier")
+            {
+                argsType = typeof(LogisticRegression.Arguments);
+            }
+            else if (learnerName == "StochasticDualCoordinateAscentBinaryClassifier")
+            {
+                argsType = typeof(SdcaBinaryTrainer.Arguments);
+            }
+            else if (learnerName == "StochasticGradientDescentBinaryClassifier")
+            {
+                argsType = typeof(StochasticGradientDescentClassificationTrainer.Arguments);
+            }
+            else if (learnerName == "SymSgdBinaryClassifier")
+            {
+                argsType = typeof(SymSgdClassificationTrainer.Arguments);
+            }
+            else
+            {
+                argsType = typeof(AveragedPerceptronTrainer.Arguments);
+            }
+            return GetSweepRanges(argsType);
+        }
+
         public static TlcModule.SweepableParamAttribute[] GetSweepRanges(Type learnerInputType)
         {
             var paramSet = new List<TlcModule.SweepableParamAttribute>();
-            foreach (var prop in learnerInputType.GetProperties(BindingFlags.Instance |
-                                                                BindingFlags.Static |
-                                                                BindingFlags.Public))
+
+            var bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public;
+            var members = learnerInputType.GetFields(bindingFlags).Cast<MemberInfo>()
+                .Concat(learnerInputType.GetProperties(bindingFlags));
+
+            foreach (var member in members)
             {
-                if (prop.GetCustomAttributes(typeof(TlcModule.SweepableLongParamAttribute), true).FirstOrDefault()
+                if (member.GetCustomAttributes(typeof(TlcModule.SweepableLongParamAttribute), true).FirstOrDefault()
                     is TlcModule.SweepableLongParamAttribute lpAttr)
                 {
-                    lpAttr.Name = lpAttr.Name ?? prop.Name;
+                    lpAttr.Name = lpAttr.Name ?? member.Name;
                     paramSet.Add(lpAttr);
                 }
 
-                if (prop.GetCustomAttributes(typeof(TlcModule.SweepableFloatParamAttribute), true).FirstOrDefault()
+                if (member.GetCustomAttributes(typeof(TlcModule.SweepableFloatParamAttribute), true).FirstOrDefault()
                     is TlcModule.SweepableFloatParamAttribute fpAttr)
                 {
-                    fpAttr.Name = fpAttr.Name ?? prop.Name;
+                    fpAttr.Name = fpAttr.Name ?? member.Name;
                     paramSet.Add(fpAttr);
                 }
 
-                if (prop.GetCustomAttributes(typeof(TlcModule.SweepableDiscreteParamAttribute), true).FirstOrDefault()
+                if (member.GetCustomAttributes(typeof(TlcModule.SweepableDiscreteParamAttribute), true).FirstOrDefault()
                     is TlcModule.SweepableDiscreteParamAttribute dpAttr)
                 {
-                    dpAttr.Name = dpAttr.Name ?? prop.Name;
+                    dpAttr.Name = dpAttr.Name ?? member.Name;
                     paramSet.Add(dpAttr);
                 }
             }
@@ -429,6 +484,18 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 pi.SetValue(entryPointObj, Convert.ToInt64(value));
         }
 
+        private static void SetValue(FieldInfo fi, IComparable value, object entryPointObj, Type propertyType)
+        {
+            if (propertyType == value?.GetType())
+                fi.SetValue(entryPointObj, value);
+            else if (propertyType == typeof(double) && value is float)
+                fi.SetValue(entryPointObj, Convert.ToDouble(value));
+            else if (propertyType == typeof(int) && value is long)
+                fi.SetValue(entryPointObj, Convert.ToInt32(value));
+            else if (propertyType == typeof(long) && value is int)
+                fi.SetValue(entryPointObj, Convert.ToInt64(value));
+        }
+
         /// <summary>
         /// Updates properties of entryPointObj instance based on the values in sweepParams
         /// </summary>
@@ -472,6 +539,68 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     }
                     else
                         SetValue(pi, param.RawValue, entryPointObj, propType);
+                }
+                catch (Exception)
+                {
+                    // Could not update param
+                    result = false;
+                }
+            }
+
+            // Make sure all changes were saved.
+            return result && CheckEntryPointStateMatchesParamValues(entryPointObj, sweepParams);
+        }
+
+        public static bool UpdatePropertiesAndFields(object entryPointObj, TlcModule.SweepableParamAttribute[] sweepParams)
+        {
+            var result = UpdateProperties(entryPointObj, sweepParams);
+            result &= UpdateFields(entryPointObj, sweepParams);
+            return result;
+        }
+
+        /// <summary>
+        /// Updates properties of entryPointObj instance based on the values in sweepParams
+        /// </summary>
+        public static bool UpdateFields(object entryPointObj, TlcModule.SweepableParamAttribute[] sweepParams)
+        {
+            bool result = true;
+            foreach (var param in sweepParams)
+            {
+                try
+                {
+                    // Only updates property if param.value isn't null and
+                    // param has a name of property.
+                    var fi = entryPointObj.GetType().GetField(param.Name);
+                    if (fi is null || param.RawValue == null)
+                        continue;
+                    var propType = Nullable.GetUnderlyingType(fi.FieldType) ?? fi.FieldType;
+
+                    if (param is TlcModule.SweepableDiscreteParamAttribute dp)
+                    {
+                        var optIndex = (int)dp.RawValue;
+                        Contracts.Assert(0 <= optIndex && optIndex < dp.Options.Length, $"Options index out of range: {optIndex}");
+                        var option = dp.Options[optIndex].ToString().ToLower();
+
+                        // Handle <Auto> string values in sweep params
+                        if (option == "auto" || option == "<auto>" || option == "< auto >")
+                        {
+                            //Check if nullable type, in which case 'null' is the auto value.
+                            if (Nullable.GetUnderlyingType(fi.FieldType) != null)
+                                fi.SetValue(entryPointObj, null);
+                            else if (fi.FieldType.IsEnum)
+                            {
+                                // Check if there is an enum option named Auto
+                                var enumDict = fi.FieldType.GetEnumValues().Cast<int>()
+                                    .ToDictionary(v => Enum.GetName(fi.FieldType, v), v => v);
+                                if (enumDict.ContainsKey("Auto"))
+                                    fi.SetValue(entryPointObj, enumDict["Auto"]);
+                            }
+                        }
+                        else
+                            SetValue(fi, (IComparable)dp.Options[optIndex], entryPointObj, propType);
+                    }
+                    else
+                        SetValue(fi, param.RawValue, entryPointObj, propType);
                 }
                 catch (Exception)
                 {

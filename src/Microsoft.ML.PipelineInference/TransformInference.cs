@@ -6,10 +6,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.ML.PipelineInference;
 using Microsoft.ML.Runtime.CommandLine;
 using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.Runtime.EntryPoints;
 using Microsoft.ML.Runtime.Internal.Utilities;
+using Microsoft.ML.Transforms;
+using Microsoft.ML.Transforms.Categorical;
 
 namespace Microsoft.ML.Runtime.PipelineInference
 {
@@ -282,6 +285,13 @@ namespace Microsoft.ML.Runtime.PipelineInference
             public bool IncludeFeaturesOverride { get; set; }
 
             public abstract IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch);
+
+            protected readonly IHostEnvironment Env;
+
+            public TransformInferenceExpertBase()
+            {
+                Env = new MLContext();
+            }
         }
 
         private static IEnumerable<ITransformInferenceExpert> GetExperts(bool excludeFeaturesRename)
@@ -412,6 +422,17 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         string source = columnNameQuoted.ToString();
                         var args = new TransformString("Copy", columnArgument.ToString());
                         var epInput = new ML.Legacy.Transforms.ColumnCopier
+                        {
+                            Column = new[]
+                            {
+                                new ML.Legacy.Transforms.CopyColumnsTransformColumn
+                                {
+                                    Name = dest,
+                                    Source = source
+                                }
+                            }
+                        };
+                        var newApiTransform = new ML.Legacy.Transforms.ColumnCopier
                         {
                             Column = new[]
                             {
@@ -591,7 +612,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     var colSpecCat = new StringBuilder();
                     var colSpecCatHash = new StringBuilder();
                     var catColumns = new List<ML.Legacy.Transforms.OneHotEncodingTransformerColumn>();
+                    var catColumnsNew = new List<OneHotEncodingEstimator.ColumnInfo>();
                     var catHashColumns = new List<ML.Legacy.Transforms.OneHotHashEncodingTransformerColumn>();
+                    var catHashColumnsNew = new List<OneHotHashEncodingEstimator.ColumnInfo>();
                     var featureCols = new List<string>();
 
                     foreach (var column in columns)
@@ -627,6 +650,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 Name = columnNameQuoted.ToString(),
                                 Source = columnNameQuoted.ToString()
                             });
+                            catColumnsNew.Add(new OneHotEncodingEstimator.ColumnInfo(columnNameQuoted.ToString(), columnNameQuoted.ToString()));
                         }
                         else
                         {
@@ -638,6 +662,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 Name = columnNameQuoted.ToString(),
                                 Source = columnNameQuoted.ToString()
                             });
+                            catHashColumnsNew.Add(new OneHotHashEncodingEstimator.ColumnInfo(columnNameQuoted.ToString(), columnNameQuoted.ToString()));
                         }
                     }
 
@@ -650,12 +675,13 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         var routingStructure = new ColumnRoutingStructure(columnsSource, columnsDest);
 
                         var epInput = new ML.Legacy.Transforms.CategoricalOneHotVectorizer { Column = catColumns.ToArray() };
+                        var input = new OneHotEncodingEstimator(Env, catColumnsNew.ToArray());
                         featureCols.AddRange(catColumns.Select(c => c.Name));
 
                         ch.Info("Suggested dictionary-based category encoding for categorical columns.");
                         var args = new TransformString("Cat", colSpecCat.ToString());
                         yield return new SuggestedTransform("Convert categorical features to indicator vectors", args,
-                            GetType(), new TransformPipelineNode(epInput), -1, routingStructure);
+                            GetType(), new TransformPipelineNode(epInput, estimator: input), -1, routingStructure);
                     }
 
                     if (foundCatHash)
@@ -667,12 +693,13 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         var routingStructure = new ColumnRoutingStructure(columnsSource, columnsDest);
 
                         var epInput = new ML.Legacy.Transforms.CategoricalHashOneHotVectorizer { Column = catHashColumns.ToArray() };
+                        var input = new OneHotHashEncodingEstimator(Env, catHashColumnsNew.ToArray());
                         featureCols.AddRange(catColumns.Select(c => c.Name));
 
                         ch.Info("Suggested hash-based category encoding for categorical columns.");
                         var args = new TransformString("CatHash", colSpecCatHash.ToString());
                         yield return new SuggestedTransform("Hash categorical features and convert to indicator vectors", args,
-                            GetType(), new TransformPipelineNode(epInput), -1, routingStructure);
+                            GetType(), new TransformPipelineNode(epInput, estimator: input), -1, routingStructure);
                     }
 
                     if (!inferenceArgs.ExcludeFeaturesConcatTransforms && featureCols.Count > 0)
@@ -854,6 +881,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             }
                     };
 
+                    var env = new MLContext();
+                    var input = new ColumnConcatenatingEstimator(env, concatColumnName, columnNames.ToArray());
+
                     // Not sure if resulting columns will be numeric or text, since concat can apply to either.
                     ColumnRoutingStructure.AnnotatedName[] columnsSource =
                         columnNames.Select(c => new ColumnRoutingStructure.AnnotatedName { IsNumeric = isNumeric, Name = c }).ToArray();
@@ -866,7 +896,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             $"Concatenate {columnsToConcat} columns into column {concatColumnName}",
                             new TransformString("Concat", arguments),
                             transformType,
-                            new TransformPipelineNode(epInput),
+                            new TransformPipelineNode(epInput, estimator: input),
                             -1,
                             routingStructure);
                 }
@@ -1299,6 +1329,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 }
                             }
                         };
+
+                        //var input = new MissingValueIndicatorEstimator(Env, name, name);
+
                         ColumnRoutingStructure.AnnotatedName[] columnsSource =
                             { new ColumnRoutingStructure.AnnotatedName { IsNumeric = true, Name = name} };
                         ColumnRoutingStructure.AnnotatedName[] columnsDest =
@@ -1379,6 +1412,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 }
                             }
                         };
+                        var input = new ColumnConcatenatingEstimator(Env, DefaultColumnNames.Features, columnListQuoted.ToArray());
 
                         ColumnRoutingStructure.AnnotatedName[] columnsSource =
                             columnListQuoted.Select(c => new ColumnRoutingStructure.AnnotatedName { IsNumeric = allColumnsNumeric, Name = c }).ToArray();
@@ -1386,7 +1420,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             { new ColumnRoutingStructure.AnnotatedName { IsNumeric = allColumnsNumeric, Name = DefaultColumnNames.Features} };
                         var routingStructure = new ColumnRoutingStructure(columnsSource, columnsDest);
                         yield return new SuggestedTransform("Concatenate feature columns into one", args,
-                            GetType(), new TransformPipelineNode(epInput), -1, routingStructure);
+                            GetType(), new TransformPipelineNode(epInput, estimator: input), -1, routingStructure);
                     }
                 }
             }

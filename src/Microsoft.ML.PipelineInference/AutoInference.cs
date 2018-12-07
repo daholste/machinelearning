@@ -125,6 +125,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             private readonly List<PipelinePattern> _history;
             private readonly IHostEnvironment _env;
             private readonly IHost _host;
+            private readonly IChannel _ch;
             private IDataView _trainData;
             private IDataView _testData;
             private IDataView _transformedData;
@@ -180,6 +181,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 _history = new List<PipelinePattern>();
                 _env = env;
                 _host = _env.Register("AutoMlState");
+                _ch = _host.Start("AutoMlStateChannel");
                 _trainData = trainData;
                 _testData = testData;
                 _terminator = terminator;
@@ -249,7 +251,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 // Run pipeline, and time how long it takes
                 stopwatch.Restart();
                 candidate.RunTrainTestExperiment(_trainData,
-                    _testData, Metric, TrainerKind, out var testMetricVal, out var trainMetricVal);
+                    _testData, Metric, TrainerKind, _env, _ch, out var testMetricVal);
                 stopwatch.Stop();
 
                 // Handle key collisions on sorted list
@@ -257,7 +259,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     testMetricVal += 1e-10;
 
                 // Save performance score
-                candidate.PerformanceSummary = new PipelineSweeperRunSummary(testMetricVal, randomizedNumberOfRows, stopwatch.ElapsedMilliseconds, trainMetricVal);
+                candidate.PerformanceSummary = new PipelineSweeperRunSummary(testMetricVal, randomizedNumberOfRows, stopwatch.ElapsedMilliseconds, 0);
                 _sortedSampledElements.Add(candidate.PerformanceSummary.MetricValue, candidate);
                 _history.Add(candidate);
 

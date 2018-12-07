@@ -18,6 +18,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Microsoft.ML.Legacy.Trainers;
+using Microsoft.ML.Runtime.Training;
 
 namespace Microsoft.ML.Runtime.PipelineInference
 {
@@ -149,7 +150,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 typeof (TransformInference.Experts.GroupIdHashRename),
                 typeof (TransformInference.Experts.NameColumnConcatRename),
                 typeof (TransformInference.Experts.LabelAdvisory),
-                typeof (TransformInference.Experts.Boolean),
+                //typeof (TransformInference.Experts.Boolean),
                 typeof (TransformInference.Experts.Categorical),
                 typeof (TransformInference.Experts.Text),
                 typeof (TransformInference.Experts.NumericMissing),
@@ -567,10 +568,11 @@ namespace Microsoft.ML.Runtime.PipelineInference
             foreach (var tt in trainerTypes)
             {
                 var sweepParams = AutoMlUtils.GetSweepRanges(tt);
+                var sweepParams2 = AutoMlUtils.GetSweepRangesNewApi(tt.Name);
                 var epInputObj = (CommonInputs.ITrainerInput)tt.GetConstructor(Type.EmptyTypes)?.Invoke(new object[] { });
                 var sl = new SuggestedRecipe.SuggestedLearner
                 {
-                    PipelineNode = new TrainerPipelineNode(epInputObj, sweepParams),
+                    PipelineNode = new TrainerPipelineNode(epInputObj, sweepParams, learnerName: tt.Name, sweepParamsNewApi: sweepParams2),
                     LearnerName = tt.Name
                 };
 
