@@ -49,13 +49,42 @@ namespace Microsoft.ML.AutoMLPublicAPI
             var preprocessor = mlContext.Transforms.CopyColumns("PaymentType", "PaymentTypeCopy");
             var validationData = preprocessor.Fit(testData).Transform(testData);
 
-            var autoMlTrainer = mlContext.Regression.Trainers.Auto(columnPurposes, maxIterations: 10, validationData: validationData);
+            var autoMlTrainer = mlContext.Regression.Trainers.Auto(columnPurposes, maxIterations: 3, validationData: validationData);
             var pipeline = preprocessor.Append(autoMlTrainer);
             var model = pipeline.Fit(trainData);
 
             // run AutoML on test data
             var transformedOutput = model.Transform(testData);
             var results = mlContext.Regression.Evaluate(transformedOutput);
+            Console.WriteLine($"R^2: {results.RSquared}");
+
+            var predictionEngine = model.MakePredictionFunction<Trip, TripPrice>(mlContext);
+            var prediction = predictionEngine.Predict(new Trip()
+            {
+                VendorId = "CMT",
+                RateCode = "1",
+                PassengerCount = 1,
+                TripTime = 1200,
+                TripDistance = 1,
+                PaymentType = "CRD"
+            });
+            Console.WriteLine($"Prediction score: {prediction.Score}");
+        }
+
+        public class Trip
+        {
+            public string VendorId;
+            public string RateCode;
+            public float PassengerCount;
+            public float TripTime;
+            public float TripDistance;
+            public string PaymentType;
+            public float Label;
+        }
+
+        public class TripPrice
+        {
+            public float Score;
         }
     }
 }

@@ -162,8 +162,10 @@ namespace Microsoft.ML.Runtime.Data
         {
             Host.CheckValue(input, nameof(input));
             Host.CheckValue(active, nameof(active));
-            Host.Check(input.Schema == Source.Schema, "Schema of input row must be the same as the schema the mapper is bound to");
 
+            var a = string.Join(", ", input.Schema.GetColumns().Select(x => x.ToString()));
+            var b = string.Join(", ", Source.Schema.GetColumns().Select(x => x.ToString()));
+            Host.Check(a == b, "Schema of input row must be the same as the schema the mapper is bound to");
             disposer = null;
             using (var ch = Host.Start("GetEntireRow"))
             {

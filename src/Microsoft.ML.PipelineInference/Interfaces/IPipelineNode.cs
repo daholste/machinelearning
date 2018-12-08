@@ -272,7 +272,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             }
             else
             {
-                trainer = new AveragedPerceptronTrainer(env);
+                trainer = new FastForestRegression(env);
             }
 
             return trainer;

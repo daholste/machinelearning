@@ -13,6 +13,8 @@ namespace Microsoft.ML.PipelineInference
         private readonly IPredictor _predictor;
         private readonly IHostEnvironment _env;
 
+        private RowToRowScorerBase _scorer;
+
         internal PipelinePatternTransform(IHostEnvironment env, ITransformer preprocessor,
             IPredictor predictor)
         {
@@ -21,7 +23,7 @@ namespace Microsoft.ML.PipelineInference
             _predictor = predictor;
         }
 
-        public bool IsRowToRowMapper => false;
+        public bool IsRowToRowMapper => true;
 
         public Schema GetOutputSchema(Schema inputSchema)
         {
@@ -30,7 +32,9 @@ namespace Microsoft.ML.PipelineInference
 
         public IRowToRowMapper GetRowToRowMapper(Schema inputSchema)
         {
-            throw new NotImplementedException();
+            var preprocessorMapper = _preprocessor.GetRowToRowMapper(inputSchema);
+            return new CompositeRowToRowMapper(inputSchema,
+                new[] { preprocessorMapper, _scorer });
         }
 
         public IDataView Transform(IDataView data)
@@ -42,8 +46,8 @@ namespace Microsoft.ML.PipelineInference
             // add normalizers
             //TrainUtils.AddNormalizerIfNeeded(env, ch, learner, ref trainData, "Features", Data.NormalizeOption.Auto);
             //roleMappedTestData = ApplyTransformUtils.ApplyAllTransformsToData(env, scoredTestData, scoredTestData);
-            var scorer = ScoreUtils.GetScorer(_predictor, roleMappedData, _env, roleMappedData.Schema);
-            return scorer.ApplyToData(_env, data);
+            _scorer = ScoreUtils.GetScorer(_predictor, roleMappedData, _env, roleMappedData.Schema) as RowToRowScorerBase;
+            return _scorer.ApplyToData(_env, data);
         }
     }
 }
