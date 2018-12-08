@@ -50,7 +50,7 @@ namespace Microsoft.ML.AutoMLPublicAPI
                 PipelineSweeperSupportedMetrics.GetSupportedMetric(PipelineSweeperSupportedMetrics.Metrics.RSquared),
                 rocketEngine, terminator, MacroUtils.TrainerKinds.SignatureRegressorTrainer,
                    trainData, ValidationData);
-            var bestPipelines = amls.InferPipelines(1, 3, 100);
+            var bestPipelines = amls.InferPipelines(1, 1, 100);
             var bestPipeline = bestPipelines.First();
 
             // hack: start dummy host & channel

@@ -1,7 +1,9 @@
-﻿using Microsoft.ML.Runtime.Data;
+﻿using Microsoft.ML.Core.Data;
+using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.Trainers;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Microsoft.ML.AutoMLPublicAPI
 {
@@ -60,6 +62,29 @@ namespace Microsoft.ML.AutoMLPublicAPI
 
             var predictionEngine = model.MakePredictionFunction<Trip, TripPrice>(mlContext);
             var prediction = predictionEngine.Predict(new Trip()
+            {
+                VendorId = "CMT",
+                RateCode = "1",
+                PassengerCount = 1,
+                TripTime = 1200,
+                TripDistance = 1,
+                PaymentType = "CRD"
+            });
+            Console.WriteLine($"Prediction score: {prediction.Score}");
+
+            string modelPath = $"Model.zip";
+            using (var fs = new FileStream(modelPath, FileMode.Create, FileAccess.Write, FileShare.Write))
+                mlContext.Model.Save(model, fs);
+
+            ITransformer savedModel;
+            using (var stream = new FileStream(modelPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                savedModel = mlContext.Model.Load(stream);
+            }
+
+            // Create prediction engine related to the loaded trained model
+            var predFunction = savedModel.MakePredictionFunction<Trip, TripPrice>(mlContext);
+            prediction = predictionEngine.Predict(new Trip()
             {
                 VendorId = "CMT",
                 RateCode = "1",
