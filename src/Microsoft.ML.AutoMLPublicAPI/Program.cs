@@ -84,7 +84,7 @@ namespace Microsoft.ML.AutoMLPublicAPI
 
             // Create prediction engine related to the loaded trained model
             var predFunction = savedModel.MakePredictionFunction<Trip, TripPrice>(mlContext);
-            prediction = predictionEngine.Predict(new Trip()
+            prediction = predFunction.Predict(new Trip()
             {
                 VendorId = "CMT",
                 RateCode = "1",
