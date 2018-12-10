@@ -137,9 +137,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ML.Recommender", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ML.MyAutoML", "src\Microsoft.ML.MyAutoML\Microsoft.ML.MyAutoML.csproj", "{4E8387C6-BADE-4D8C-B38A-FFA8B1EBAA3F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.ML.AutoMLPublicAPI", "src\Microsoft.ML.AutoMLPublicAPI\Microsoft.ML.AutoMLPublicAPI.csproj", "{91B2CBC1-21D6-40D8-B645-ED9ECC8CB8D5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.ML.AutoMLPublicAPI", "src\Microsoft.ML.AutoMLPublicAPI\Microsoft.ML.AutoMLPublicAPI.csproj", "{91B2CBC1-21D6-40D8-B645-ED9ECC8CB8D5}"
 EndProject
 Global
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug-Intrinsics|Any CPU = Debug-Intrinsics|Any CPU
