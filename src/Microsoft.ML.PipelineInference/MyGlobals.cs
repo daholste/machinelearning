@@ -11,7 +11,7 @@ namespace Microsoft.ML.PipelineInference
     {
         public static string OutputDir = ".";
         public static ISet<string> FailedPipelineHashes = new HashSet<string>();
-        public static Stopwatch Stopwatch;
+        public static Stopwatch Stopwatch = Stopwatch.StartNew();
         public static SortedList<double, IPredictorModel> BestModels = new SortedList<double, IPredictorModel>(new ReversedComparer<double>());
     }
 }

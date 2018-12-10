@@ -33,7 +33,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public Arguments()
             {
-                MaxRowsToRead = 100;
+                MaxRowsToRead = 10000;
             }
         }
 

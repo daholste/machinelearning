@@ -66,11 +66,15 @@ namespace Microsoft.ML.Runtime.Data
             {
                 var est = _estimators[i];
                 xfs[i] = est.Fit(current);
-                current = xfs[i].Transform(current);
-                if (_needCacheAfter[i] && i < _estimators.Length - 1)
+
+                if(i < _estimators.Length - 1)
                 {
-                    Contracts.AssertValue(_host);
-                    current = new CacheDataView(_host, current, null);
+                    current = xfs[i].Transform(current);
+                    if (_needCacheAfter[i])
+                    {
+                        Contracts.AssertValue(_host);
+                        current = new CacheDataView(_host, current, null);
+                    }
                 }
             }
 
