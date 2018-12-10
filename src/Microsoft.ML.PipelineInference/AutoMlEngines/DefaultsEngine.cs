@@ -55,7 +55,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                 do
                 {   // Make sure transforms set is valid. Repeat until passes verifier.
-                    pipeline = new PipelinePattern(SampleTransforms(out var transformsBitMask),
+                    pipeline = new PipelinePattern(GetTransforms(out var transformsBitMask),
                         learner, "", Env);
                     valid = PipelineVerifier(pipeline, transformsBitMask);
                     count++;
@@ -72,7 +72,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return candidates.ToArray();
         }
 
-        private TransformInference.SuggestedTransform[] SampleTransforms(out long transformsBitMask)
+        private TransformInference.SuggestedTransform[] GetTransforms(out long transformsBitMask)
         {
             // For now, return all transforms.
             var sampledTransforms = AvailableTransforms.ToList();

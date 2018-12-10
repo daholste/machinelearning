@@ -21,29 +21,6 @@ using Microsoft.ML.Trainers.SymSgd;
 
 namespace Microsoft.ML.Runtime.PipelineInference
 {
-    public interface IPipelineNode<TModelType>
-    {
-        void SetInputData(Var<IDataView> data);
-
-        void SetInputData(IDataView data, Experiment experiment);
-
-        DataAndModel<TModelType> Add(Experiment experiment);
-
-        T GetPropertyValueByName<T>(string name, T defaultValue);
-    }
-
-    public sealed class DataAndModel<TModel>
-    {
-        public Var<IDataView> OutData { get; }
-        public Var<TModel> Model { get; }
-
-        public DataAndModel(Var<IDataView> outData, Var<TModel> model)
-        {
-            OutData = outData;
-            Model = model;
-        }
-    }
-
     public abstract class PipelineNodeBase
     {
         public virtual ParameterSet HyperSweeperParamSet { get; set; }

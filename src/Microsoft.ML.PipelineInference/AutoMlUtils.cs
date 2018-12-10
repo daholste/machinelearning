@@ -44,134 +44,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return outputValue;
         }
 
-        public static PipelineSweeperRunSummary ExtractRunSummary(IHostEnvironment env, IDataView result, string metricColumnName, IDataView trainResult = null)
-        {
-            Contracts.CheckValue(env, nameof(env));
-            env.CheckValue(result, nameof(result));
-            env.CheckNonEmpty(metricColumnName, nameof(metricColumnName));
-
-            double testingMetricValue = ExtractValueFromIdv(env, result, metricColumnName);
-            double trainingMetricValue = trainResult != null ? ExtractValueFromIdv(env, trainResult, metricColumnName)  : double.MinValue;
-            return new PipelineSweeperRunSummary(testingMetricValue, 0, 0, trainingMetricValue);
-        }
-
-        public static CommonInputs.IEvaluatorInput CloneEvaluatorInstance(CommonInputs.IEvaluatorInput evalInput) =>
-            CloneEvaluatorInstance<CommonInputs.IEvaluatorInput>(evalInput);
-
-        public static CommonOutputs.IEvaluatorOutput CloneEvaluatorInstance(CommonOutputs.IEvaluatorOutput evalOutput) =>
-            CloneEvaluatorInstance<CommonOutputs.IEvaluatorOutput>(evalOutput);
-
-        private static T CloneEvaluatorInstance<T>(T evaler)
-        {
-            Type instanceType = evaler.GetType();
-            T newInstance = (T)Activator.CreateInstance(instanceType);
-            if (evaler is CommonOutputs.IEvaluatorOutput) return newInstance;
-            foreach (var prop in instanceType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
-                prop.SetValue(newInstance, prop.GetValue(evaler));
-            return newInstance;
-        }
-
-        /// <summary>
-        /// Using the dependencyMapping and included transforms, determines whether every
-        /// transform present only consumes columns produced by a lower- or same-level transform,
-        /// or existed in the original dataset. Note, a column could be produced by a
-        /// transform on the same level, such as in multipart (atomic group) transforms.
-        /// </summary>
-        public static bool AreColumnsConsistent(TransformInference.SuggestedTransform[] includedTransforms,
-            AutoInference.DependencyMap dependencyMapping)
-        {
-            foreach (var transform in includedTransforms)
-                foreach (var colConsumed in transform.RoutingStructure.ColumnsConsumed)
-                {
-                    AutoInference.LevelDependencyMap ldm = dependencyMapping[transform.RoutingStructure.Level];
-                    var colInfo = ldm.Keys.FirstOrDefault(k => k.Name == colConsumed.Name);
-
-                    // Consumed column does not exist at this sublevel. Since we never drop columns
-                    // it will not exist at any lower levels, either. Thus, problem with column consumption.
-                    if (colInfo.Name == null)
-                        return false;
-
-                    // If this column could have been produced by a transform, make sure at least one
-                    // of the possible producer transforms in in our included transforms list.
-                    if (ldm[colInfo].Count > 0 && !ldm[colInfo].Any(t => includedTransforms.Contains(t)))
-                        return false;
-                }
-
-            // Passed all tests
-            return true;
-        }
-
-        public static bool IsValidTransformsPipeline(long transformsBitMask, TransformInference.SuggestedTransform[] selectedAndFinalTransforms,
-            TransformInference.SuggestedTransform[] allTransforms, AutoInference.DependencyMap dependencyMapping)
-        {
-            return true;
-
-            // If no transforms and none selected, valid.
-            /*if (transformsBitMask == 0 && allTransforms.Length == 0)
-                return true;
-
-            // If including transforms that aren't there, invalid pipeline
-            if (transformsBitMask > 0 && allTransforms.Length == 0)
-                return false;
-
-            var graph = BuildAtomicIdDependencyGraph(allTransforms);
-            var selectedInitialTransforms =
-                allTransforms.Where(t => AtomicGroupPresent(transformsBitMask, t.AtomicGroupId)).ToArray();
-
-            // Make sure all necessary atomic groups are present, beginning with last level
-            for (int l = allTransforms.Select(t => t.RoutingStructure.Level).DefaultIfEmpty(0).Max(); l > 0; l--)
-            {
-                int level = l; // To avoid complaint about access to modified closure
-                var subset = allTransforms.Where(t => t.RoutingStructure.Level == level);
-                var atomicIdsForLevel = subset.Select(t => t.AtomicGroupId).Distinct().ToArray();
-                if (atomicIdsForLevel.Any(a =>
-                    AtomicGroupPresent(transformsBitMask, a) &&
-                    !graph[a].All(r => AtomicGroupPresent(transformsBitMask, r))))
-                    return false;
-            }
-
-            // Make sure each transform only consumes columns actually produced by
-            // a lower-level transform, or existed in original dataset.
-            if (!AreColumnsConsistent(selectedInitialTransforms, dependencyMapping))
-                return false;
-
-            // Make sure has numeric vector Features column
-            if (!HasFinalFeatures(selectedAndFinalTransforms, dependencyMapping))
-                return false;
-
-            // Passed all tests
-            return true;*/
-        }
-
-        private static bool HasFinalFeatures(TransformInference.SuggestedTransform[] transforms,
-            AutoInference.DependencyMap dependencyMapping) => HasFinalFeaturesColumnTransform(transforms) || HasInitialNumericFeatures(dependencyMapping);
-
-        private static bool HasFinalFeaturesColumnTransform(TransformInference.SuggestedTransform[] transforms) =>
-            transforms.Any(t => t.ExpertType == typeof(TransformInference.Experts.FeaturesColumnConcatRenameNumericOnly));
-
-        private static bool HasInitialNumericFeatures(AutoInference.DependencyMap dependencyMapping)
-        {
-            if (dependencyMapping.Count == 0)
-                return false;
-            foreach (var info in dependencyMapping[0])
-            {
-                if (info.Key.Name == DefaultColumnNames.Features &&
-                    !info.Key.IsHidden &&
-                    info.Key.ItemType.IsNumber &&
-                    info.Value.Count == 0)
-                    return true;
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Simple wrapper which allows the call signature to match the signature needed for the PipelineOptimizerBase interface.
-        /// </summary>
-        public static Func<PipelinePattern, long, bool> ValidationWrapper(TransformInference.SuggestedTransform[] allTransforms, AutoInference.DependencyMap dependencyMapping)
-        {
-            return (p, b) => IsValidTransformsPipeline(b, p.Transforms, allTransforms.Union(p.Transforms).ToArray(), dependencyMapping);
-        }
-
         /// <summary>
         /// Using the dependencyMapping and included transforms, computes which subset of columns in dataSample
         /// will be present in the final transformed dataset when only the transforms present are applied.
@@ -226,38 +98,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return Enumerable.Range(0, dataSample.Schema.ColumnCount).Except(includedColumnIndices).ToArray();
         }
 
-        /// <summary>
-        /// Builds dependency dictionary of which atomic groups depend on which. Assumes that
-        /// a column will be produced by the highest level possible producing transform.
-        /// </summary>
-        /// <param name="allTransforms">The set of possible transforms for a dataset for all levels.</param>
-        private static Dictionary<int, List<int>> BuildAtomicIdDependencyGraph(TransformInference.SuggestedTransform[] allTransforms)
-        {
-            var graph = new Dictionary<int, List<int>>();
-
-            foreach (var transform in allTransforms)
-            {
-                var route = transform.RoutingStructure;
-
-                foreach (var columnConsumedName in route.ColumnsConsumed)
-                {
-                    if (!graph.ContainsKey(transform.AtomicGroupId))
-                        graph.Add(transform.AtomicGroupId, new List<int>());
-                    var possibleProducers =
-                        allTransforms.Where(t => t.RoutingStructure.ColumnsProduced.Contains(columnConsumedName) &&
-                            !t.Equals(transform)).ToList();
-                    if (possibleProducers.Count == 0)
-                        continue;
-                    var bestCandidate = possibleProducers.OrderByDescending(t => t.RoutingStructure.Level).First();
-                    var index = allTransforms.ToList().IndexOf(bestCandidate);
-                    var atomicId = allTransforms[index].AtomicGroupId;
-                    graph[transform.AtomicGroupId].Add(atomicId);
-                }
-            }
-
-            return graph;
-        }
-
         public static bool AtomicGroupPresent(long bitmask, int atomicGroupId) => (bitmask & (1 << atomicGroupId)) > 0;
 
         public static long TransformsToBitmask(TransformInference.SuggestedTransform[] transforms) =>
@@ -305,21 +145,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             }
             var excludedColumnIndices = GetExcludedColumnIndices(selectedTransforms, data, dependencyMapping);
             return GetFinalFeatureConcat(env, data, excludedColumnIndices, level, atomicGroupLimit, dataRoles);
-        }
-
-        public static IDataView ApplyTransformSet(IHostEnvironment env, IDataView data, TransformInference.SuggestedTransform[] transforms)
-        {
-            // Double-check all transforms are supported (i.e., have pipleline nodes)
-            transforms = transforms.Where(t => t.PipelineNode != null).ToArray();
-            // Build experiment graph and run on data, using transforms
-            var recipe = new RecipeInference.SuggestedRecipe("dummy", transforms,
-                new RecipeInference.SuggestedRecipe.SuggestedLearner[0]);
-            var epGraph = recipe.ToEntryPointGraph(env);
-            epGraph.Graph.Compile();
-            epGraph.Graph.SetInput(epGraph.GetSubgraphFirstNodeDataVarName(env), data);
-            epGraph.Graph.Run();
-            // Get dataview output after all transforms applied
-            return epGraph.Graph.GetOutput(epGraph.TransformsOutputData);
         }
 
         /// <summary>

@@ -71,7 +71,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             _hyperSweepers = new Dictionary<string, ISweeper>();
             _secondaryEngines = new Dictionary<string, IPipelineOptimizer>
             {
-                [nameof(UniformRandomEngine)] = new UniformRandomEngine(env),
                 [nameof(DefaultsEngine)] = new DefaultsEngine(env, new DefaultsEngine.Arguments())
             };
         }
@@ -85,16 +84,14 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
         public override void SetSpace(TransformInference.SuggestedTransform[] availableTransforms,
             RecipeInference.SuggestedRecipe.SuggestedLearner[] availableLearners,
-            Func<PipelinePattern, long, bool> pipelineVerifier,
             IDataView originalData, IDataView fullyTransformedData, AutoInference.DependencyMap dependencyMapping,
             bool isMaximizingMetric)
         {
             foreach (var engine in _secondaryEngines.Values)
-                engine.SetSpace(availableTransforms, availableLearners,
-                    pipelineVerifier, originalData, fullyTransformedData, dependencyMapping,
-                    isMaximizingMetric);
+                engine.SetSpace(availableTransforms, availableLearners, originalData, fullyTransformedData,
+                    dependencyMapping, isMaximizingMetric);
 
-            base.SetSpace(availableTransforms, availableLearners, pipelineVerifier, originalData, fullyTransformedData,
+            base.SetSpace(availableTransforms, availableLearners, originalData, fullyTransformedData,
                 dependencyMapping, isMaximizingMetric);
         }
 
@@ -142,68 +139,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 DependencyMapping, sampledTransforms.ToArray(), AvailableTransforms, DataRoles));
 
             return sampledTransforms.ToArray();
-            /*
-
-            var sampledTransforms =
-                new List<TransformInference.SuggestedTransform>(
-                    AutoMlUtils.GetMandatoryTransforms(AvailableTransforms));
-            var remainingAvailableTransforms =
-                AvailableTransforms.Where(t => !sampledTransforms.Any(t.Equals)).ToArray();
-            var mask = AutoMlUtils.TransformsToBitmask(sampledTransforms.ToArray());
-
-            foreach (var transform in remainingAvailableTransforms)
-            {
-                // Add pseudo-mass to encourage sampling of untried transforms.
-                double maxWeight = history.Length > 0 ? history.Max(w => w.PerformanceSummary.MetricValue) : 0d;
-                double allWeight = Math.Max(maxWeight, 1d);
-                double learnerWeight = Math.Max(maxWeight, 1d);
-                int allCounts = 1;
-                int learnerCounts = 1;
-
-                // Add mass according to performance.
-                foreach (var pipeline in history)
-                {
-                    if (pipeline.Transforms.Any(transform.Equals))
-                    {
-                        allWeight +=
-                            AutoMlUtils.ProcessWeight(pipeline.PerformanceSummary.MetricValue,
-                                maxWeight, IsMaximizingMetric);
-                        allCounts++;
-
-                        if (pipeline.Learner.LearnerName == learner.LearnerName)
-                        {
-                            learnerWeight += pipeline.PerformanceSummary.MetricValue;
-                            learnerCounts++;
-                        }
-                    }
-                }
-
-                // Take average mass as weight, and take convex combination of
-                // learner-specific weight and unconditioned weight.
-                allWeight /= allCounts > 0 ? allCounts : 1;
-                learnerWeight /= learnerCounts > 0 ? learnerCounts : 1;
-                var lambda = MathUtils.Sigmoid(learnerCounts - 3);
-                var combinedWeight = uniformRandomSampling ?
-                    0.5 : lambda * learnerWeight + (1 - lambda) * allWeight;
-
-                // Sample transform according to combined weight.
-                if (ProbUtils.SampleUniform() <= combinedWeight / maxWeight)
-                    mask |= 1L << transform.AtomicGroupId;
-            }
-
-            // Add all chosen transforms.
-            sampledTransforms.AddRange(remainingAvailableTransforms.Where(t =>
-                AutoMlUtils.AtomicGroupPresent(mask, t.AtomicGroupId)));
-
-            // Add final features concat transform. NOTE: computed bitmask should always
-            // exclude the final features concat. If we forget to exclude that one, will
-            // cause an error in verification, since it isn't included in the original
-            // dependency mapping (i.e., its level isn't in the dictionary).
-            sampledTransforms.AddRange(AutoMlUtils.GetFinalFeatureConcat(Env, FullyTransformedData,
-                DependencyMapping, sampledTransforms.ToArray(), AvailableTransforms, DataRoles));
-            transformsBitMask = mask;
-
-            return sampledTransforms.ToArray();*/
         }
 
         private RecipeInference.SuggestedRecipe.SuggestedLearner[] GetTopLearners(IEnumerable<PipelinePattern> history)
@@ -272,7 +207,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
         private PipelinePattern[] GetInitialPipelines(IEnumerable<PipelinePattern> history, int numCandidates)
         {
-            var engine = _secondaryEngines[_randomInit ? nameof(UniformRandomEngine) : nameof(DefaultsEngine)];
+            var engine = _secondaryEngines[nameof(DefaultsEngine)];
             return engine.GetNextCandidates(history, numCandidates, DataRoles);
         }
 
@@ -324,11 +259,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     valid = valid && !VisitedPipelines.Contains(hashKey) &&
                         !MyGlobals.FailedPipelineHashes.Contains(learner.PipelineNode.ToString());
                     count++;
-
-                    if(count >= maxNumberAttempts)
-                    {
-                        Console.WriteLine($"{++totalSkipped} got hereee");
-                    }
                 } while (!valid && count <= maxNumberAttempts);
 
                 // If maxed out chances and at second stage, move onto next stage.

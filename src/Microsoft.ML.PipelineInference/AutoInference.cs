@@ -435,7 +435,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     }
 
                     var transforms = transformsList.ToArray();
-                    Func<PipelinePattern, long, bool> verifier = AutoMlUtils.ValidationWrapper(transforms, dependencyMapping);
 
                     // Save state, for resuming learning
                     _availableTransforms = transforms;
@@ -444,8 +443,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     _transformedData = dataSample;
 
                     // Update autoML engine to know what the search space looks like
-                    AutoMlEngine.SetSpace(_availableTransforms, _availableLearners, verifier,
-                        _trainData, _transformedData, _dependencyMapping, Metric.IsMaximizing);
+                    AutoMlEngine.SetSpace(_availableTransforms, _availableLearners, _trainData, _transformedData,
+                        _dependencyMapping, Metric.IsMaximizing);
                 }
             }
 
@@ -485,7 +484,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 using (var ch = _host.Start("Suggested Pipeline"))
                 {
                     ch.Info($"PipelineSweeper Iteration Number : {_history.Count}");
-                    ch.Info($"PipelineSweeper Pipeline Id : {pipeline.UniqueId}");
 
                     foreach (var transform in pipeline.Transforms)
                     {
@@ -549,16 +547,10 @@ namespace Microsoft.ML.Runtime.PipelineInference
         }
 
         public static AutoMlMlState InferPipelines(IHostEnvironment env, PipelineOptimizerBase autoMlEngine, string trainDataPath,
-            string schemaDefinitionFile, out string schemaDefinition, int numTransformLevels, int batchSize, SupportedMetric metric,
+            string schemaDefinitionFile, int numTransformLevels, int batchSize, SupportedMetric metric,
             out PipelinePattern bestPipeline, int numOfSampleRows, ITerminator terminator, MacroUtils.TrainerKinds trainerKind)
         {
             Contracts.CheckValue(env, nameof(env));
-
-            // REVIEW: Should be able to infer schema by itself, without having to
-            // infer recipes. Look into this.
-            // Set loader settings through inference
-            RecipeInference.InferRecipesFromData(env, trainDataPath, schemaDefinitionFile,
-                out var _, out schemaDefinition, out var _, false);
 
 #pragma warning disable 0618
             var data = ImportTextData.ImportText(env, new ImportTextData.Input
