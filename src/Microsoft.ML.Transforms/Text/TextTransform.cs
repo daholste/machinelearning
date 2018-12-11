@@ -138,6 +138,9 @@ namespace Microsoft.ML.Transforms.Text
 #pragma warning restore MSML_NoInstanceInitializers // No initializers on instance fields or properties
         }
 
+        public INgramExtractorFactoryFactory WordFeatureExtractor { get; set; }
+        public INgramExtractorFactoryFactory CharFeatureExtractor { get; set; }
+
         public readonly string OutputColumn;
         private readonly string[] _inputColumns;
         public IReadOnlyCollection<string> InputColumns => _inputColumns.AsReadOnly();
@@ -147,8 +150,6 @@ namespace Microsoft.ML.Transforms.Text
         // REVIEW: expose them once sub-transforms are estimators.
         private IStopWordsRemoverFactory _stopWordsRemover;
         private TermLoaderArguments _dictionary;
-        private INgramExtractorFactoryFactory _wordFeatureExtractor;
-        private INgramExtractorFactoryFactory _charFeatureExtractor;
 
         private readonly IHost _host;
 
@@ -239,8 +240,8 @@ namespace Microsoft.ML.Transforms.Text
                 var host = parent._host;
                 host.Check(Enum.IsDefined(typeof(Language), parent.AdvancedSettings.TextLanguage));
                 host.Check(Enum.IsDefined(typeof(CaseNormalizationMode), parent.AdvancedSettings.TextCase));
-                WordExtractorFactory = parent._wordFeatureExtractor?.CreateComponent(host, parent._dictionary);
-                CharExtractorFactory = parent._charFeatureExtractor?.CreateComponent(host, parent._dictionary);
+                WordExtractorFactory = parent.WordFeatureExtractor?.CreateComponent(host, parent._dictionary);
+                CharExtractorFactory = parent.CharFeatureExtractor?.CreateComponent(host, parent._dictionary);
                 VectorNormalizer = parent.AdvancedSettings.VectorNormalizer;
                 Language = parent.AdvancedSettings.TextLanguage;
                 StopWordsRemover = parent._stopWordsRemover;
@@ -288,8 +289,8 @@ namespace Microsoft.ML.Transforms.Text
 
             _stopWordsRemover = null;
             _dictionary = null;
-            _wordFeatureExtractor = new NgramExtractorTransform.NgramExtractorArguments();
-            _charFeatureExtractor = new NgramExtractorTransform.NgramExtractorArguments() { NgramLength = 3, AllLengths = false };
+            WordFeatureExtractor = new NgramExtractorTransform.NgramExtractorArguments();
+            CharFeatureExtractor = new NgramExtractorTransform.NgramExtractorArguments() { NgramLength = 3, AllLengths = false };
         }
 
         public ITransformer Fit(IDataView input)
@@ -521,8 +522,8 @@ namespace Microsoft.ML.Transforms.Text
             var estimator = new TextFeaturizingEstimator(env, args.Column.Source ?? new[] { args.Column.Name }, args.Column.Name, settings);
             estimator._stopWordsRemover = args.StopWordsRemover;
             estimator._dictionary = args.Dictionary;
-            estimator._wordFeatureExtractor = args.WordFeatureExtractor;
-            estimator._charFeatureExtractor = args.CharFeatureExtractor;
+            estimator.WordFeatureExtractor = args.WordFeatureExtractor;
+            estimator.CharFeatureExtractor = args.CharFeatureExtractor;
             return estimator.Fit(data).Transform(data) as IDataTransform;
         }
 

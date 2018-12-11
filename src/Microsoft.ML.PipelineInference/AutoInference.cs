@@ -297,8 +297,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             {
                 // Infer transforms using experts
                 var levelTransforms = TransformInference.InferTransforms(_env, data, args, _dataRoles);
-                //levelTransforms = levelTransforms.Where(x => x.Transform.Kind != "TreeFeaturizationTransform").ToArray();
-                levelTransforms = levelTransforms.Where(x => !x.ExpertType.Equals(typeof(NaiveBayesTransform))).ToArray();
 
                 // Retain only those transforms inferred which were also passed in.
                 if (existingTransforms != null)

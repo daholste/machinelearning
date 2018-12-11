@@ -350,9 +350,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             {
             }
 
-            public override List<Type> QualifierTransforms()
-                => new List<Type> { typeof(TransformInference.Experts.NaiveBayesTransform) };
-
             protected override IEnumerable<SuggestedRecipe> ApplyCore(Type predictorType,
                 TransformInference.SuggestedTransform[] transforms)
             {

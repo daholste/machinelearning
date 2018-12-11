@@ -13,6 +13,8 @@ using Microsoft.ML.Runtime.EntryPoints;
 using Microsoft.ML.Runtime.Internal.Utilities;
 using Microsoft.ML.Transforms;
 using Microsoft.ML.Transforms.Categorical;
+using Microsoft.ML.Transforms.Conversions;
+using Microsoft.ML.Transforms.Text;
 
 namespace Microsoft.ML.Runtime.PipelineInference
 {
@@ -390,6 +392,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 Source = source
                             }
                         };
+                        var input = new ValueToKeyMappingEstimator(Env, source, dest);
 
                         var routingStructure = new ColumnRoutingStructure(
                             new[]
@@ -401,7 +404,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 new ColumnRoutingStructure.AnnotatedName {IsNumeric = true, Name = dest}
                             }
                         );
-                        yield return new SuggestedTransform("Convert text labels to keys", args, GetType(), new TransformPipelineNode(epInput), -1, routingStructure, true);
+                        yield return new SuggestedTransform("Convert text labels to keys", args, GetType(), new TransformPipelineNode(epInput, estimator: input), -1, routingStructure, true);
 
                         if (unique == 1)
                         {
@@ -432,17 +435,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 }
                             }
                         };
-                        var newApiTransform = new ML.Legacy.Transforms.ColumnCopier
-                        {
-                            Column = new[]
-                            {
-                                new ML.Legacy.Transforms.CopyColumnsTransformColumn
-                                {
-                                    Name = dest,
-                                    Source = source
-                                }
-                            }
-                        };
+                        var input = new CopyColumnsEstimator(Env, source, dest);
 
                         var routingStructure = new ColumnRoutingStructure(
                             new[]
@@ -456,7 +449,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         );
 
                         yield return new SuggestedTransform($"Rename label column to '{DefaultColumnNames.Label}'", args,
-                            GetType(), new TransformPipelineNode(epInput), -1, routingStructure, true);
+                            GetType(), new TransformPipelineNode(epInput, estimator: input), -1, routingStructure, true);
                     }
                 }
             }
@@ -505,6 +498,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 }
                             }
                         };
+                        var input = new OneHotHashEncodingEstimator(Env, new OneHotHashEncodingEstimator.ColumnInfo(dest, source));
 
                         var routingStructure = new ColumnRoutingStructure(
                             new[]
@@ -518,7 +512,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         );
 
                         string[] outputColNames = new string[] { DefaultColumnNames.GroupId };
-                        yield return new SuggestedTransform("Hash text group IDs.", args, GetType(), new TransformPipelineNode(epInput), -1, routingStructure);
+                        yield return new SuggestedTransform("Hash text group IDs.", args, GetType(), new TransformPipelineNode(epInput, estimator: input), -1, routingStructure);
                     }
                     else if (col.ColumnName != DefaultColumnNames.GroupId)
                     {
@@ -538,6 +532,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 }
                             }
                         };
+                        var input = new CopyColumnsEstimator(Env, source, dest);
 
                         var routingStructure = new ColumnRoutingStructure(
                             new[]
@@ -550,8 +545,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             }
                         );
 
-                        yield return new SuggestedTransform($"Rename group ID column to '{DefaultColumnNames.GroupId}'", args, GetType(), new TransformPipelineNode(epInput),
-                            -1, routingStructure);
+                        yield return new SuggestedTransform($"Rename group ID column to '{DefaultColumnNames.GroupId}'", args, GetType(),
+                            new TransformPipelineNode(epInput, estimator: input), -1, routingStructure);
                     }
                 }
             }
@@ -735,6 +730,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     var columnArgument = new StringBuilder();
                     var columnNameQuoted = new StringBuilder();
                     var epColumns = new List<ML.Legacy.Transforms.ConvertingTransformColumn>();
+                    var newColumns = new List<ConvertingTransform.ColumnInfo>();
 
                     foreach (var column in columns)
                     {
@@ -763,6 +759,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             Source = columnNameQuoted.ToString(),
                             ResultType = ML.Legacy.Data.DataKind.R4
                         });
+                        newColumns.Add(new ConvertingTransform.ColumnInfo(columnNameQuoted.ToString(),
+                            columnNameQuoted.ToString(), DataKind.R4));
                     }
 
                     if (columnArgument.Length > 0)
@@ -770,13 +768,14 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         ch.Info("Suggested conversion to numeric for boolean features.");
                         var args = new TransformString("Convert", $"{columnArgument}type=R4");
                         var epInput = new ML.Legacy.Transforms.ColumnTypeConverter { Column = epColumns.ToArray(), ResultType = ML.Legacy.Data.DataKind.R4 };
+                        var input = new ConvertingEstimator(Env, newColumns.ToArray());
                         ColumnRoutingStructure.AnnotatedName[] columnsSource =
                             epColumns.Select(c => new ColumnRoutingStructure.AnnotatedName { IsNumeric = false, Name = c.Name }).ToArray();
                         ColumnRoutingStructure.AnnotatedName[] columnsDest =
                             epColumns.Select(c => new ColumnRoutingStructure.AnnotatedName { IsNumeric = true, Name = c.Name }).ToArray();
                         var routingStructure = new ColumnRoutingStructure(columnsSource, columnsDest);
                         yield return new SuggestedTransform("Convert boolean features to numeric", args,
-                            GetType(), new TransformPipelineNode(epInput), -1, routingStructure);
+                            GetType(), new TransformPipelineNode(epInput, estimator: input), -1, routingStructure);
 
                         // Concat featurized columns into existing feature column, if transformed at least one column.
                         if (!inferenceArgs.ExcludeFeaturesConcatTransforms)
@@ -901,7 +900,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             routingStructure);
                 }
 
-                public static SuggestedTransform TextTransformUnigramTriChar(string srcColumn, string dstColumn, string arg, Type transformType)
+                public static SuggestedTransform TextTransformUnigramTriChar(IHostEnvironment env, string srcColumn, string dstColumn, string arg, Type transformType)
                 {
                     StringBuilder columnArgument = InferenceHelpers.GetTextTransformUnigramTriCharArgument(srcColumn, dstColumn);
 
@@ -915,12 +914,17 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         Name = dstColumn,
                         Source = new[] { srcColumn }
                     };
+                    var input = new TextFeaturizingEstimator(env, srcColumn, dstColumn)
+                    {
+                        WordFeatureExtractor = new NgramExtractorTransform.NgramExtractorArguments() { NgramLength = 1 },
+                        CharFeatureExtractor = new NgramExtractorTransform.NgramExtractorArguments() { NgramLength = 3 }
+                    };
 
                     return TextTransform(srcColumn, dstColumn, columnArgument.ToString(), "Unigram plus Trichar",
-                        transformType, new TransformPipelineNode(nodeInput));
+                        transformType, new TransformPipelineNode(nodeInput, estimator: input));
                 }
 
-                public static SuggestedTransform TextTransformBigramTriChar(string srcColumn, string dstColumn, string arg, Type transformType)
+                public static SuggestedTransform TextTransformBigramTriChar(IHostEnvironment env, string srcColumn, string dstColumn, string arg, Type transformType)
                 {
                     StringBuilder columnArgument = InferenceHelpers.GetTextTransformBigramTriCharArgument(srcColumn, dstColumn);
 
@@ -933,9 +937,14 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         Name = dstColumn,
                         Source = new[] { srcColumn }
                     };
+                    var input = new TextFeaturizingEstimator(env, srcColumn, dstColumn)
+                    {
+                        WordFeatureExtractor = new NgramExtractorTransform.NgramExtractorArguments() { NgramLength = 2 },
+                        CharFeatureExtractor = new NgramExtractorTransform.NgramExtractorArguments() { NgramLength = 3 }
+                    };
 
                     return TextTransform(srcColumn, dstColumn, columnArgument.ToString(), "Bigram plus Trichar",
-                        transformType, new TransformPipelineNode(nodeInput));
+                        transformType, new TransformPipelineNode(nodeInput, estimator: input));
                 }
 
                 public static SuggestedTransform TextTransform(string srcColumn, string dstColumn, string arg,
@@ -987,7 +996,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     //Get Unigram + Trichar for text transform on the concatenated text column.
                     string featureTextColumn = columns[0].GetTempColumnName("FeaturesText");
-                    yield return InferenceHelpers.TextTransformUnigramTriChar(concatTextColumnName, featureTextColumn, " tokens=+", GetType());
+                    yield return InferenceHelpers.TextTransformUnigramTriChar(Env, concatTextColumnName, featureTextColumn, " tokens=+", GetType());
 
                     //Get Tree Featurizer with FastTreeRegression.
                     var args = new TransformString("TreeFeaturizationTransform", "tr=FastTreeRegression feat=" + featureTextColumn);
@@ -1016,6 +1025,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 }
                             }
                     };
+                    var input = new ColumnConcatenatingEstimator(Env, featuresTreeFeatColumn, treeFeaturizerOutputColumnName);
                     ColumnRoutingStructure.AnnotatedName[] columnsSourceCr =
                         { new ColumnRoutingStructure.AnnotatedName { IsNumeric = true, Name = treeFeaturizerOutputColumnName } };
                     ColumnRoutingStructure.AnnotatedName[] columnsDestCr =
@@ -1024,7 +1034,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     yield return
                        new SuggestedTransform("Concatenate-Rename Leaves column generated by tree featurizer to " + featuresTreeFeatColumn,
                            new TransformString("Concat", $"col={featuresTreeFeatColumn}:{treeFeaturizerOutputColumnName}"),
-                           GetType(), new TransformPipelineNode(epInput), -1, routingStructureCr);
+                           GetType(), new TransformPipelineNode(epInput, estimator: input), -1, routingStructureCr);
 
                     //Get TrainScore with KMeansPlusPlus.
                     args = new TransformString("TrainScore", "tr=KMeansPlusPlus feat=" + featureTextColumn);
@@ -1053,6 +1063,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 }
                             }
                     };
+                    var input2 = new ColumnConcatenatingEstimator(Env, featuresKMeansColumn, kMeansOutputColumnName);
                     ColumnRoutingStructure.AnnotatedName[] columnsSourceCc =
                         { new ColumnRoutingStructure.AnnotatedName { IsNumeric = true, Name = kMeansOutputColumnName } };
                     ColumnRoutingStructure.AnnotatedName[] columnsDestCc =
@@ -1061,7 +1072,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     yield return
                        new SuggestedTransform("Concatenate-Rename Score column generated by Train Score with KMeans to " + featuresKMeansColumn,
                            new TransformString("Concat", $"col={featuresKMeansColumn}:{kMeansOutputColumnName}"),
-                           GetType(), new TransformPipelineNode(epInput2), -1, routingStructureCc);
+                           GetType(), new TransformPipelineNode(epInput2, estimator: input2), -1, routingStructureCc);
 
                     tempColumnList.Add(featureTextColumn);
                     tempColumnList.Add(featuresTreeFeatColumn);
@@ -1075,71 +1086,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     //Concat text featurized column into feature column.
                     if (!inferenceArgs.ExcludeFeaturesConcatTransforms)
                         yield return InferenceHelpers.ConcatColumnsIntoOne(tempColumnList, DefaultColumnNames.Features, GetType(), true);
-                }
-            }
-
-            public sealed class NaiveBayesTransform : TransformInferenceExpertBase
-            {
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
-                {
-                    List<string> textColumnNames =
-                        columns.Where(
-                            column => column.Type.ItemType.IsText && column.Purpose == ColumnPurpose.TextFeature)
-                            .Select(column => column.ColumnName)
-                            .ToList();
-
-                    if ((textColumnNames.Count == 0) ||
-                        (columns.Count(col => col.Purpose == ColumnPurpose.Label) != 1) ||
-                        (columns.Any(col => col.Purpose == ColumnPurpose.Label && col.Type.ItemType != NumberType.R4)))
-                        yield break;
-
-                    //Concat text columns into one.
-                    string concatTextColumnName;
-                    if (textColumnNames.Count > 1)
-                    {
-                        concatTextColumnName = columns[0].GetTempColumnName("TextConcatNB");
-                        yield return
-                            InferenceHelpers.ConcatColumnsIntoOne(textColumnNames, concatTextColumnName, GetType(), false);
-                    }
-                    else
-                        concatTextColumnName = textColumnNames.First();
-
-                    //Get Unigram + Trichar text transform.
-                    string concatTextColumnTextFeature = columns[0].GetTempColumnName("FeaturesTextNB");
-                    yield return InferenceHelpers.TextTransformUnigramTriChar(concatTextColumnName, concatTextColumnTextFeature, string.Empty, GetType());
-
-                    //Get Tree Featurizer with FastTreeRegression.
-                    var args = new TransformString("TreeFeaturizationTransform", "tr=FastForestRegression{shuffleLabels+ nl=80} feat=" + concatTextColumnTextFeature);
-                    string treeFeaturizerOutputColName = "Leaves";
-                    ColumnRoutingStructure.AnnotatedName[] columnsSource =
-                        { new ColumnRoutingStructure.AnnotatedName { IsNumeric = true, Name = concatTextColumnTextFeature} };
-                    ColumnRoutingStructure.AnnotatedName[] columnsDest =
-                        { new ColumnRoutingStructure.AnnotatedName { IsNumeric = true, Name = treeFeaturizerOutputColName} };
-                    var routingStructure = new ColumnRoutingStructure(columnsSource, columnsDest);
-
-                    var epInput = new ML.Legacy.Transforms.TreeLeafFeaturizer();
-                    var epFastForestRegressor = new Legacy.Trainers.FastForestRegressor
-                    {
-                        FeatureColumn = concatTextColumnTextFeature,
-                        NumLeaves = 80,
-                        ShuffleLabels = true,
-                        LabelColumn = DefaultColumnNames.Label
-                    };
-
-                    yield return
-                        new SuggestedTransform(
-                            $"Apply tree featurizer transform with fast forest regression on '{DefaultColumnNames.Label}' column and '{concatTextColumnTextFeature}' column",
-                            args, GetType(), new TransformPipelineNode(epInput, subTrainerObj: epFastForestRegressor), -1, routingStructure);
-
-                    //Concat text featurized column into feature column.
-                    List<string> featureCols = new List<string>(new[] { treeFeaturizerOutputColName });
-                    if (columns.Any(
-                            col =>
-                                (col.Purpose == ColumnPurpose.NumericFeature) ||
-                                (col.Purpose == ColumnPurpose.CategoricalFeature)))
-                        featureCols.Add(DefaultColumnNames.Features);
-                    if (!inferenceArgs.ExcludeFeaturesConcatTransforms)
-                        yield return InferenceHelpers.ConcatColumnsIntoOne(featureCols, DefaultColumnNames.Features, GetType(), true);
                 }
             }
 
@@ -1181,13 +1127,15 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             },
                             OutputTokens = false
                         };
+                        var input = new TextFeaturizingEstimator(Env, columnDestRenamed, columnNameSafe);
                         ColumnRoutingStructure.AnnotatedName[] columnsSource =
                             { new ColumnRoutingStructure.AnnotatedName { IsNumeric = false, Name = columnNameSafe} };
                         ColumnRoutingStructure.AnnotatedName[] columnsDest =
                             { new ColumnRoutingStructure.AnnotatedName { IsNumeric = true, Name = columnDestRenamed} };
                         var routingStructure = new ColumnRoutingStructure(columnsSource, columnsDest);
                         yield return new SuggestedTransform(
-                            $"Apply text featurizer transform on text features for column '{column.ColumnName}'", args, typeof(Text), new TransformPipelineNode(epInput), -1, routingStructure);
+                            $"Apply text featurizer transform on text features for column '{column.ColumnName}'", args, typeof(Text),
+                            new TransformPipelineNode(epInput, estimator: input), -1, routingStructure);
                     }
 
                     // Concat text featurized columns into existing feature column, if transformed at least one column.
@@ -1225,7 +1173,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     //Get Unigram + Trichar for text transform on the concatenated text column.
                     string featureTextColumn = columns[0].GetTempColumnName("FeaturesText");
-                    yield return InferenceHelpers.TextTransformUnigramTriChar(concatTextColumnName, featureTextColumn, string.Empty, GetType());
+                    yield return InferenceHelpers.TextTransformUnigramTriChar(Env, concatTextColumnName, featureTextColumn, string.Empty, GetType());
 
                     //Concat text featurized column into feature column.
                     List<string> featureCols = new List<string>(new[] { featureTextColumn });
@@ -1266,7 +1214,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     //Get Bigram + Trichar for text transform on the concatenated text column.
                     string featureTextColumn = columns[0].GetTempColumnName("FeaturesText");
-                    yield return InferenceHelpers.TextTransformBigramTriChar(concatTextColumnName, featureTextColumn, string.Empty, GetType());
+                    yield return InferenceHelpers.TextTransformBigramTriChar(Env, concatTextColumnName, featureTextColumn, string.Empty, GetType());
 
                     //Concat text featurized column into feature column.
                     List<string> featureCols = new List<string>(new[] { featureTextColumn });
@@ -1329,8 +1277,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 }
                             }
                         };
-
-                        //var input = new MissingValueIndicatorEstimator(Env, name, name);
+                        var input = new MissingValueIndicatorEstimator(Env, name, name);
 
                         ColumnRoutingStructure.AnnotatedName[] columnsSource =
                             { new ColumnRoutingStructure.AnnotatedName { IsNumeric = true, Name = name} };
@@ -1338,7 +1285,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             { new ColumnRoutingStructure.AnnotatedName { IsNumeric = true, Name = name} };
                         var routingStructure = new ColumnRoutingStructure(columnsSource, columnsDest);
                         yield return new SuggestedTransform("Replace missing features with zeroes and concatenate missing indicators", args,
-                            GetType(), new TransformPipelineNode(epInput), -1, routingStructure);
+                            GetType(), new TransformPipelineNode(epInput, estimator: input), -1, routingStructure);
                     }
                 }
             }
@@ -1502,13 +1449,14 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 }
                             }
                         };
+                        var input = new CopyColumnsEstimator(Env, columnNameQuoted.ToString(), DefaultColumnNames.Name);
                         ColumnRoutingStructure.AnnotatedName[] columnsSource =
                             { new ColumnRoutingStructure.AnnotatedName { IsNumeric = false, Name = columnNameQuoted.ToString()} };
                         ColumnRoutingStructure.AnnotatedName[] columnsDest =
                             { new ColumnRoutingStructure.AnnotatedName { IsNumeric = false, Name = DefaultColumnNames.Name} };
                         var routingStructure = new ColumnRoutingStructure(columnsSource, columnsDest);
                         yield return new SuggestedTransform("Rename name column to 'Name'", args,
-                            GetType(), new TransformPipelineNode(epInput), -1, routingStructure);
+                            GetType(), new TransformPipelineNode(epInput, estimator: input), -1, routingStructure);
                     }
                     else if (count > 1)
                     {
@@ -1548,6 +1496,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                                 }
                             }
                         };
+                        var input = new ColumnConcatenatingEstimator(Env, DefaultColumnNames.Name, columnListQuoted.ToArray());
 
                         ColumnRoutingStructure.AnnotatedName[] columnsSource =
                             columnListQuoted.Select(c => new ColumnRoutingStructure.AnnotatedName { IsNumeric = false, Name = c }).ToArray();
@@ -1555,7 +1504,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             { new ColumnRoutingStructure.AnnotatedName { IsNumeric = false, Name = DefaultColumnNames.Name} };
                         var routingStructure = new ColumnRoutingStructure(columnsSource, columnsDest);
                         yield return new SuggestedTransform("Concatenate name columns into one", args,
-                            GetType(), new TransformPipelineNode(epInput), -1, routingStructure);
+                            GetType(), new TransformPipelineNode(epInput, estimator: input), -1, routingStructure);
                     }
                 }
             }
