@@ -14,8 +14,7 @@ namespace Microsoft.ML.Runtime.Internal.Utilities
     /// <summary>
     /// Convenience utilities for vector operations on <see cref="VBuffer{T}"/>.
     /// </summary>
-    [BestFriend]
-    internal static class VBufferUtils
+    public static class VBufferUtils
     {
         private const float SparsityThreshold = 0.25f;
 

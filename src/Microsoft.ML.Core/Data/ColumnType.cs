@@ -71,8 +71,7 @@ namespace Microsoft.ML.Runtime.Data
         /// It is equivalent to the result produced by <see cref="DataKindExtensions.TryGetDataKind(Type, out DataKind)"/>.
         /// For external code it would be preferable to operate over <see cref="RawType"/>.
         /// </summary>
-        [BestFriend]
-        internal DataKind RawKind { get; }
+        public DataKind RawKind { get; }
 
         /// <summary>
         /// Whether this is a primitive type. External code should use <c>is <see cref="PrimitiveType"/></c>.
@@ -89,14 +88,12 @@ namespace Microsoft.ML.Runtime.Data
         /// <summary>
         /// Whether this type is a standard numeric type. External code should use <c>is <see cref="NumberType"/></c>.
         /// </summary>
-        [BestFriend]
-        internal bool IsNumber { get; }
+        public bool IsNumber { get; }
 
         /// <summary>
         /// Whether this type is the standard text type. External code should use <c>is <see cref="TextType"/></c>.
         /// </summary>
-        [BestFriend]
-        internal bool IsText
+        public bool IsText
         {
             get
             {
@@ -111,8 +108,7 @@ namespace Microsoft.ML.Runtime.Data
         /// <summary>
         /// Whether this type is the standard boolean type. External code should use <c>is <see cref="BoolType"/></c>.
         /// </summary>
-        [BestFriend]
-        internal bool IsBool
+        public bool IsBool
         {
             get
             {
@@ -163,8 +159,7 @@ namespace Microsoft.ML.Runtime.Data
         /// Whether this is a vector type. External code should just check directly against whether this type
         /// is <see cref="VectorType"/>.
         /// </summary>
-        [BestFriend]
-        internal bool IsVector { get; }
+        public bool IsVector { get; }
 
         /// <summary>
         /// Equivalent to <c>as <see cref="VectorType"/></c>.
@@ -175,21 +170,18 @@ namespace Microsoft.ML.Runtime.Data
         /// <summary>
         /// For non-vector types, this returns the column type itself (i.e., return <c>this</c>).
         /// </summary>
-        [BestFriend]
-        internal ColumnType ItemType => ItemTypeCore;
+        public ColumnType ItemType => ItemTypeCore;
 
         /// <summary>
         /// Whether this is a vector type with known size. Returns false for non-vector types.
         /// Equivalent to <c><see cref="VectorSize"/> &gt; 0</c>.
         /// </summary>
-        [BestFriend]
-        internal bool IsKnownSizeVector => VectorSize > 0;
+        public bool IsKnownSizeVector => VectorSize > 0;
 
         /// <summary>
         /// Zero return means either it's not a vector or the size is unknown.
         /// </summary>
-        [BestFriend]
-        internal int VectorSize => VectorSizeCore;
+        public int VectorSize => VectorSizeCore;
 
         /// <summary>
         /// For non-vectors, this returns one. For unknown size vectors, it returns zero.
