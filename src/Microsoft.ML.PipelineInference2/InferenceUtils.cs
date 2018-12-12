@@ -23,13 +23,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return CacheCore(take, env);
         }
 
-        public static IDataView Cache(this IDataView data)
-        {
-            //Contracts.CheckValue(data, nameof(data));
-            // REVIEW: This should take an env as a parameter, not create one.
-            return CacheCore(data, new ConsoleEnvironment(0));
-        }
-
         private static IDataView CacheCore(IDataView data, IHostEnvironment env)
         {
             //Contracts.AssertValue(data, "data");

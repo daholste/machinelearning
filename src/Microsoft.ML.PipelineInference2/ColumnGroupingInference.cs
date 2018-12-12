@@ -168,38 +168,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return sb.ToString();
         }
 
-        /// <summary>
-        /// Generates individual indices from a string range selector.
-        /// </summary>
-        public static int[] GetRange(string indicies)
-        {
-            string[] rangesLocal = indicies.Split(',');
-            var indices = new List<int>();
-            foreach (string range in rangesLocal)
-            {
-                if (range.Contains('-'))
-                {
-                    string[] startEnd = range.Split('-');
-                    //Contracts.Assert(startEnd.Length == 2);
-                    int start = int.Parse(startEnd[0]);
-                    int end = int.Parse(startEnd[1]);
-                    //Contracts.Assert(start >= 0);
-                    //Contracts.Assert(start <= end);
-                    for (int i = start; i <= end; i++)
-                        indices.Add(i);
-                }
-                else
-                {
-                    int index = int.Parse(range);
-                    //Contracts.Assert(index >= 0);
-                    indices.Add(index);
-                }
-            }
-
-            indices.Sort((a, b) => a - b);
-            return indices.ToArray();
-        }
-
+        
         public static TextLoader.Column[] GenerateLoaderColumns(GroupingColumn[] columns)
         {
             var loaderColumns = new List<TextLoader.Column>();

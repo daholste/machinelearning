@@ -43,27 +43,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
     {
         public virtual ParameterSet HyperSweeperParamSet { get; set; }
 
-        protected virtual T1 CloneEntryPoint<T1>(T1 oldEp)
-        {
-            var newEp = oldEp.GetType().GetConstructor(new Type[] { })?.Invoke(new object[] { });
-            if (newEp != null)
-            {
-                var propertyInfos = newEp.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-                foreach (var pi in propertyInfos)
-                    pi.SetValue(newEp, pi.GetValue(oldEp));
-            }
-            return (T1)newEp;
-        }
-
-        protected string GetEpName(Type type)
-        {
-            string fullName = type.FullName;
-            var epName = fullName?.Substring(fullName.Substring(0,
-                                                 fullName.LastIndexOf(".", StringComparison.Ordinal)).LastIndexOf(".",
-                                                 StringComparison.Ordinal) + 1) ?? type.Name;
-            return epName;
-        }
-
         protected void PropagateParamSetValues(ParameterSet hyperParams,
             IEnumerable<TlcModule.SweepableParamAttribute> sweepParams)
         {

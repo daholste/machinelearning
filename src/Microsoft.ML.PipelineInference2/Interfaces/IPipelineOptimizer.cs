@@ -25,7 +25,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
         void SetSpace(TransformInference.SuggestedTransform[] availableTransforms,
             RecipeInference.SuggestedRecipe.SuggestedLearner[] availableLearners,
-            Func<PipelinePattern, long, bool> pipelineVerifier,
             IDataView originalData, IDataView fullyTransformedData,
             AutoInference.DependencyMap dependencyMapping,
             bool isMaximizingMetric);
@@ -40,7 +39,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
     {
         protected TransformInference.SuggestedTransform[] AvailableTransforms;
         protected RecipeInference.SuggestedRecipe.SuggestedLearner[] AvailableLearners;
-        protected Func<PipelinePattern, long, bool> PipelineVerifier;
         protected IDataView OriginalData;
         protected IDataView FullyTransformedData;
         protected AutoInference.DependencyMap DependencyMapping;
@@ -65,13 +63,11 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
         public virtual void SetSpace(TransformInference.SuggestedTransform[] availableTransforms,
             RecipeInference.SuggestedRecipe.SuggestedLearner[] availableLearners,
-            Func<PipelinePattern, long, bool> pipelineVerifier,
             IDataView originalData, IDataView fullyTransformedData, AutoInference.DependencyMap dependencyMapping,
             bool isMaximizingMetric)
         {
             AvailableLearners = availableLearners;
             AvailableTransforms = availableTransforms;
-            PipelineVerifier = pipelineVerifier;
             OriginalData = originalData;
             FullyTransformedData = fullyTransformedData;
             DependencyMapping = dependencyMapping;
