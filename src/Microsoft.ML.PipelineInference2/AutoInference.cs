@@ -48,13 +48,13 @@ namespace Microsoft.ML.Runtime.PipelineInference
         public class DependencyMap : Dictionary<int, LevelDependencyMap> { }
 
         [TlcModule.ComponentKind("AutoMlStateBase")]
-        public interface ISupportAutoMlStateFactory : IComponentFactory<IMlState>
+        public interface ISupportAutoMlStateFactory : IComponentFactory<AutoMlMlState>
         { }
 
         /// <summary>
         /// Class that holds state for an autoML search-in-progress. Should be able to resume search, given this object.
         /// </summary>
-        public sealed class AutoMlMlState : IMlState
+        public sealed class AutoMlMlState
         {
             private readonly SortedList<double, PipelinePattern> _sortedSampledElements;
             private readonly List<PipelinePattern> _history;
@@ -94,7 +94,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 //[Argument(ArgumentType.AtMostOnce, HelpText = "Learner set to sweep over (if available).", ShortName = "learners")]
                 public string[] RequestedLearners;
 
-                public IMlState CreateComponent(IHostEnvironment env) => new AutoMlMlState(env, this);
+                public AutoMlMlState CreateComponent(IHostEnvironment env) => new AutoMlMlState(env, this);
             }
 
             public AutoMlMlState(IHostEnvironment env, Arguments args)
