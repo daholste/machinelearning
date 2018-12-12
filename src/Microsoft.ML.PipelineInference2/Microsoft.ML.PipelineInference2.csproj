@@ -10,6 +10,13 @@
     <ProjectReference Include="..\Microsoft.ML.HalLearners\Microsoft.ML.HalLearners.csproj" />
     <ProjectReference Include="..\Microsoft.ML.LightGBM\Microsoft.ML.LightGBM.csproj" />
     <ProjectReference Include="..\Microsoft.ML.Sweeper\Microsoft.ML.Sweeper.csproj" />
+	
+	
+	<NativeAssemblyReference Include="FastTreeNative" />
+    <NativeAssemblyReference Include="CpuMathNative" />
+    <NativeAssemblyReference Include="FactorizationMachineNative" />
+    <NativeAssemblyReference Include="LdaNative" />
+    <NativeAssemblyReference Include="SymSgdNative" />
   </ItemGroup>
 
 </Project>

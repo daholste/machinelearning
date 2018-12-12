@@ -305,20 +305,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 }
             }
 
-            private bool IsValidLearnerSet(RecipeInference.SuggestedRecipe.SuggestedLearner[] learners)
-            {
-                var inferredLearners = RecipeInference.AllowedLearners(_env, TrainerKind);
-                return learners.All(l => inferredLearners.Any(i => i.LearnerName == l.LearnerName));
-            }
-
-            public void KeepSelectedLearners(IEnumerable<string> learnersToKeep)
-            {
-                var allLearners = RecipeInference.AllowedLearners(_env, TrainerKind);
-                //_env.AssertNonEmpty(allLearners);
-                _availableLearners = allLearners.Where(l => learnersToKeep.Contains(l.LearnerName)).ToArray();
-                AutoMlEngine.UpdateLearners(_availableLearners);
-            }
-
             /// <summary>
             /// Search space is transforms X learners X hyperparameters.
             /// </summary>

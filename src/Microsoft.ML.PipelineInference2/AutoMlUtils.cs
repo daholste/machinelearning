@@ -31,7 +31,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             var schema = result.Schema;
             if (!schema.TryGetColumnIndex(columnName, out var metricCol))
                 throw new Exception($"Schema does not contain column: {columnName}");
-                //throw env.ExceptParam(nameof(columnName), $"Schema does not contain column: {columnName}");
+            //throw env.ExceptParam(nameof(columnName), $"Schema does not contain column: {columnName}");
 
             using (var cursor = result.GetRowCursor(col => col == metricCol))
             {
@@ -52,7 +52,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             //env.CheckNonEmpty(metricColumnName, nameof(metricColumnName));
 
             double testingMetricValue = ExtractValueFromIdv(env, result, metricColumnName);
-            double trainingMetricValue = trainResult != null ? ExtractValueFromIdv(env, trainResult, metricColumnName)  : double.MinValue;
+            double trainingMetricValue = trainResult != null ? ExtractValueFromIdv(env, trainResult, metricColumnName) : double.MinValue;
             return new PipelineSweeperRunSummary(testingMetricValue, 0, 0, trainingMetricValue);
         }
 
@@ -392,34 +392,75 @@ namespace Microsoft.ML.Runtime.PipelineInference
             var paramSet = new List<TlcModule.SweepableParamAttribute>();
 
             var bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public;
-            var members = learnerInputType.GetFields(bindingFlags).Cast<MemberInfo>()
-                .Concat(learnerInputType.GetProperties(bindingFlags));
 
-            foreach (var member in members)
+            var fields = learnerInputType.GetFields(bindingFlags);
+            var properties = learnerInputType.GetProperties(bindingFlags);
+            var members = fields.Cast<MemberInfo>().Concat(properties);
+
+            var fieldValueGetters = fields.Select(f => new MyFieldInfo(f));
+            var propertyValueGetters = properties.Select(p => new MyPropertyInfo(p));
+            var memberValueGetters = fieldValueGetters.Cast<IMemberInfo>().Concat(propertyValueGetters);
+
+            var instance = Activator.CreateInstance(learnerInputType);
+
+            for (var i = 0; i < members.Count(); i++)
             {
-                if (member.GetCustomAttributes(typeof(TlcModule.SweepableLongParamAttribute), true).FirstOrDefault()
-                    is TlcModule.SweepableLongParamAttribute lpAttr)
+                var member = members.ElementAt(i);
+                var memberValueGetter = memberValueGetters.ElementAt(i);
+
+                var sweepableAttrs = member.GetCustomAttributes(typeof(TlcModule.SweepableParamAttribute), true);
+                if(!sweepableAttrs.Any())
                 {
-                    lpAttr.Name = lpAttr.Name ?? member.Name;
-                    paramSet.Add(lpAttr);
+                    continue;
+                }
+                var sweepableAttr = sweepableAttrs.First() as TlcModule.SweepableParamAttribute;
+                sweepableAttr.Name = sweepableAttr.Name ?? member.Name;
+
+                var memberValue = memberValueGetter.GetValue(instance);
+                if (memberValue != null)
+                {
+                    sweepableAttr.SetUsingValueText(memberValue.ToString());
                 }
 
-                if (member.GetCustomAttributes(typeof(TlcModule.SweepableFloatParamAttribute), true).FirstOrDefault()
-                    is TlcModule.SweepableFloatParamAttribute fpAttr)
-                {
-                    fpAttr.Name = fpAttr.Name ?? member.Name;
-                    paramSet.Add(fpAttr);
-                }
-
-                if (member.GetCustomAttributes(typeof(TlcModule.SweepableDiscreteParamAttribute), true).FirstOrDefault()
-                    is TlcModule.SweepableDiscreteParamAttribute dpAttr)
-                {
-                    dpAttr.Name = dpAttr.Name ?? member.Name;
-                    paramSet.Add(dpAttr);
-                }
+                paramSet.Add(sweepableAttr);
             }
 
             return paramSet.ToArray();
+        }
+
+        public interface IMemberInfo
+        {
+            object GetValue(object obj);
+        }
+
+        public class MyPropertyInfo : IMemberInfo
+        {
+            private PropertyInfo _info;
+
+            public MyPropertyInfo(PropertyInfo info)
+            {
+                _info = info;
+            }
+
+            public object GetValue(object obj)
+            {
+                return _info.GetValue(obj);
+            }
+        }
+
+        public class MyFieldInfo : IMemberInfo
+        {
+            private FieldInfo _info;
+
+            public MyFieldInfo(FieldInfo info)
+            {
+                _info = info;
+            }
+
+            public object GetValue(object obj)
+            {
+                return _info.GetValue(obj);
+            }
         }
 
         public static IValueGenerator ToIValueGenerator(TlcModule.SweepableParamAttribute attr)

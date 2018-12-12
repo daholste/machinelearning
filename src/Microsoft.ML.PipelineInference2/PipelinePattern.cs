@@ -95,9 +95,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
         {
             var pipelineTransformer = TrainTransformer(trainData, ch);
             var scoredTestData = pipelineTransformer.Transform(testData);
-            var ctx = new RegressionContext(env);
+            var ctx = new BinaryClassificationContext(env);
             var metrics = ctx.Evaluate(scoredTestData);
-            testMetricValue = metrics.RSquared;
+            testMetricValue = metrics.Accuracy;
         }
 
         public ITransformer TrainTransformer(IDataView trainData, IChannel ch)

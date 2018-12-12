@@ -212,7 +212,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
         public override PipelinePattern[] GetNextCandidates(IEnumerable<PipelinePattern> history, int numCandidates, RoleMappedData dataRoles)
         {
-
             var prevCandidates = history.ToArray();
             DataRoles = dataRoles;
 
