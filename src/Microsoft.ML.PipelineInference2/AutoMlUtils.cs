@@ -83,7 +83,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             }
             return data;
         }
-        
+
         public static long TransformsToBitmask(TransformInference.SuggestedTransform[] transforms) =>
             transforms.Aggregate(0, (current, t) => current | 1 << t.AtomicGroupId);
 
@@ -565,6 +565,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 }
             }
             return results;
-        }       
+        }
     }
 }

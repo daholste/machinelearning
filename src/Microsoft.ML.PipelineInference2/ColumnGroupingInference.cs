@@ -168,7 +168,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return sb.ToString();
         }
 
-        
         public static TextLoader.Column[] GenerateLoaderColumns(GroupingColumn[] columns)
         {
             var loaderColumns = new List<TextLoader.Column>();
