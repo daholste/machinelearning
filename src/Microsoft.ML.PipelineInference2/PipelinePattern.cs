@@ -89,6 +89,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
             }
 
             var transformerChain = estimatorChain.Fit(trainData);
+            trainData = transformerChain.Transform(trainData);
+
             var roleMappedTrainData = new RoleMappedData(trainData, opt: false,
                 RoleMappedSchema.ColumnRole.Label.Bind(DefaultColumnNames.Label),
                 RoleMappedSchema.ColumnRole.Feature.Bind(DefaultColumnNames.Features));
