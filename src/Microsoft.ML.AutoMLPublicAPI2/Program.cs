@@ -47,6 +47,8 @@ namespace Microsoft.ML.AutoMLPublicAPI2
             var validationData = textLoader.Read(validationDataPath);
             var testData = textLoader.Read(testDataPath);
 
+            //////// SDCA
+
             // preprocess
             var preprocessorEstimator = mlContext.Transforms.Categorical.OneHotEncoding("Workclass", "Workclass")
                 .Append(mlContext.Transforms.Categorical.OneHotEncoding("Education", "Education"))
@@ -60,15 +62,16 @@ namespace Microsoft.ML.AutoMLPublicAPI2
                     "Age", "Workclass", "Fnlwgt", "Education", "EducationNum", "MaritalStatus", "Occupation", "Relationship",
                     "Race", "Sex", "CapitalGain", "CapitalLoss", "HoursPerWeek", "NativeCountry"));
 
-            // preprocess validation data
-            var preprocessTransformer = preprocessorEstimator.Fit(trainData);
-            validationData = preprocessTransformer.Transform(validationData);
-
             // train model
-            //var trainer = mlContext.BinaryClassification.Trainers.StochasticDualCoordinateAscent();
-            var trainer = mlContext.BinaryClassification.Trainers.Auto(maxIterations: 25, validationData: validationData);
+            var trainer = mlContext.BinaryClassification.Trainers.StochasticDualCoordinateAscent();
             var estimatorChain = preprocessorEstimator.Append(trainer);
             var model = estimatorChain.Fit(trainData);
+
+            //////// AutoML
+
+            // run AutoML & train model
+            //var trainer = mlContext.BinaryClassification.Trainers.Auto(maxIterations: 2, validationData: validationData);
+            //var model = trainer.Fit(trainData);
 
             // run AutoML on test data
             var transformedOutput = model.Transform(testData);
