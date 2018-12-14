@@ -116,12 +116,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 // No need to provide information from unsuccessful loader, so we create temporary environment and get information from it in case of success
                 using (var loaderEnv = new ConsoleEnvironment(0, true))
                 {
-                    var messages = new ConcurrentBag<ChannelMessage>();
+                    /*var messages = new ConcurrentBag<ChannelMessage>();
                     loaderEnv.AddListener<ChannelMessage>(
                         (src, msg) =>
                         {
                             messages.Add(msg);
-                        });
+                        });*/
                     var idv = TextLoader.ReadFile(loaderEnv, args, source).Take(1000);
                     var columnCounts = new List<int>();
                     int columnIndex;
@@ -152,8 +152,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     result = new ColumnSplitResult(true, args.Separator, args.AllowQuoting, args.AllowSparse, mostCommon.Key);
                     ch.Trace("Discovered {0} columns using separator '{1}'", mostCommon.Key, args.Separator);
-                    foreach (var msg in messages)
-                        ch.Send(msg);
+                    //foreach (var msg in messages)
+                        //ch.Trace("{0}", msg);
+                        //ch.Send(msg);
                     return true;
                 }
             }

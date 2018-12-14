@@ -61,42 +61,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             }
         }
 
-        public abstract class Recipe
-        {
-            public virtual List<Type> AllowedTransforms() => new List<Type>()
-            {
-                typeof (TransformInference.Experts.AutoLabel),
-                typeof (TransformInference.Experts.GroupIdHashRename),
-                typeof (TransformInference.Experts.NameColumnConcatRename),
-                typeof (TransformInference.Experts.LabelAdvisory),
-                //typeof (TransformInference.Experts.Boolean),
-                typeof (TransformInference.Experts.Categorical),
-                typeof (TransformInference.Experts.Text),
-                typeof (TransformInference.Experts.NumericMissing),
-                typeof (TransformInference.Experts.FeaturesColumnConcatRename),
-            };
-
-            public virtual List<Type> QualifierTransforms() => AllowedTransforms();
-
-            protected virtual TransformInference.SuggestedTransform[] GetSuggestedTransforms(
-                TransformInference.InferenceResult transformInferenceResult, Type predictorType)
-            {
-                List<Type> allowedTransforms = AllowedTransforms();
-                List<Type> qualifierTransforms = QualifierTransforms();
-
-                if (transformInferenceResult.SuggestedTransforms.Any(transform => qualifierTransforms.Contains(transform.ExpertType)))
-                {
-                    return transformInferenceResult.SuggestedTransforms
-                        .Where(transform => allowedTransforms.Contains(transform.ExpertType) || qualifierTransforms.Contains(transform.ExpertType))
-                        .ToArray();
-                }
-
-                return null;
-            }
-
-            protected abstract IEnumerable<SuggestedRecipe> ApplyCore(Type predictorType, TransformInference.SuggestedTransform[] transforms);
-        }
-
         public static TextLoader.Arguments MyAutoMlInferTextLoaderArguments(IHostEnvironment env,
             string dataFile, string labelColName)
         {

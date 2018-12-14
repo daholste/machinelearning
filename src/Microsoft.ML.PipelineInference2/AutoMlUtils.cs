@@ -508,7 +508,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 switch (hps.ElementAt(i))
                 {
                     case TlcModule.SweepableDiscreteParamAttribute dp:
-                        results[i] = ComponentFactoryUtils.CreateFromFunction(env =>
+                        results[i] = PipelineInference2.ComponentFactoryUtils.CreateFromFunction(env =>
                         {
                             var dpArgs = new DiscreteParamArguments()
                             {
@@ -520,7 +520,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         break;
 
                     case TlcModule.SweepableFloatParamAttribute fp:
-                        results[i] = ComponentFactoryUtils.CreateFromFunction(env =>
+                        results[i] = PipelineInference2.ComponentFactoryUtils.CreateFromFunction(env =>
                         {
                             var fpArgs = new FloatParamArguments()
                             {
@@ -542,7 +542,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         break;
 
                     case TlcModule.SweepableLongParamAttribute lp:
-                        results[i] = ComponentFactoryUtils.CreateFromFunction(env =>
+                        results[i] = PipelineInference2.ComponentFactoryUtils.CreateFromFunction(env =>
                         {
                             var lpArgs = new LongParamArguments()
                             {

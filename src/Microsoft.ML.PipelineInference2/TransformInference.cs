@@ -166,7 +166,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 });
             }
 
-            public string GetTempColumnName(string tag = null) => _data.Schema.GetTempColumnName(tag);
+            public string GetTempColumnName(string tag = null) => _data.Schema.GetTemporaryColumnName(tag);
 
             private bool HasMissingOne()
             {

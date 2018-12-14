@@ -12,6 +12,7 @@ using Microsoft.ML.Runtime.Training;
 using Microsoft.ML.Core.Data;
 using Microsoft.ML.Runtime.Internal.Calibration;
 using Microsoft.ML.PipelineInference2;
+using Microsoft.ML.Transforms.Normalizers;
 
 namespace Microsoft.ML.Runtime.PipelineInference
 {
@@ -68,7 +69,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         public ITransformer TrainTransformer(IDataView trainData, IChannel ch)
         {
             // apply transforms to trian and test data
-            var estimatorChain = new EstimatorChain<ITransformer>();
+            IEstimator<ITransformer> estimatorChain = new EstimatorChain<ITransformer>();
             foreach (var transform in Transforms)
             {
                 if(transform.PipelineNode.Estimator != null)
@@ -77,16 +78,17 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 }
             }
 
-            var transformerChain = estimatorChain.Fit(trainData);
-            trainData = transformerChain.Transform(trainData);
-
             // get learner
             var learner = Learner.PipelineNode.BuildTrainer(_env);
 
-            // add normalizers
-            //TrainUtils.AddNormalizerIfNeeded(env, ch, learner, ref trainData, "Features", Data.NormalizeOption.Auto);
-            //roleMappedTestData = ApplyTransformUtils.ApplyAllTransformsToData(env, scoredTestData, scoredTestData);
+            // normalize features, if needed
+            if (learner.Info.NeedNormalization)
+            {
+                var normalizingEstimator = new NormalizingEstimator(_env, DefaultColumnNames.Features);
+                estimatorChain = estimatorChain.Append(normalizingEstimator);
+            }
 
+            var transformerChain = estimatorChain.Fit(trainData);
             var roleMappedTrainData = new RoleMappedData(trainData, opt: false,
                 RoleMappedSchema.ColumnRole.Label.Bind(DefaultColumnNames.Label),
                 RoleMappedSchema.ColumnRole.Feature.Bind(DefaultColumnNames.Features));
