@@ -17,7 +17,7 @@ namespace Microsoft.ML.AutoMLPublicAPI
 {
     public static class AutoMlExtension
     {
-        public static AutoMlRegressionEstimator Auto(this RegressionTrainers trainers, Dictionary<string, ColumnPurpose> columnPurposes,
+        public static AutoMlRegressionEstimator Auto(this RegressionTrainers trainers,
             int maxIterations = 10, IDataView validationData = null)
         {
             // hack: init legacy assembly, for catalog of learners
