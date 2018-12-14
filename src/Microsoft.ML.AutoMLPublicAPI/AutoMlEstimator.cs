@@ -73,11 +73,4 @@ namespace Microsoft.ML.AutoMLPublicAPI
             return new SchemaShape(cols);
         }
     }
-
-    public enum ColumnPurpose
-    {
-        Label,
-        Categorical,
-        Numerical
-    }
 }

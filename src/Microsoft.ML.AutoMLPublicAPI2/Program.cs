@@ -24,6 +24,18 @@ namespace Microsoft.ML.AutoMLPublicAPI2
             var validationData = textLoader.Read(validationDataPath);
             var testData = textLoader.Read(testDataPath);
 
+            var sdca = mlContext.BinaryClassification.Trainers.StochasticDualCoordinateAscent();
+            var sdcaModel = sdca.Fit(trainData);
+            var sdcaScoredData = sdcaModel.Transform(testData);
+            var sdcaResults = mlContext.BinaryClassification.Evaluate(sdcaScoredData);
+            Console.WriteLine($"\r\nSDCA Accuracy: {sdcaResults.Accuracy}");
+
+            var lightGbm = mlContext.BinaryClassification.Trainers.LightGbm();
+            var lightGbmModel = lightGbm.Fit(trainData);
+            var lightGbmScoredData = lightGbmModel.Transform(testData);
+            var lightGbmResults = mlContext.BinaryClassification.Evaluate(lightGbmScoredData);
+            Console.WriteLine($"\r\nLightGBM Accuracy: {lightGbmResults.Accuracy}");
+
             // custom preprocessor
             var autoMlTrainer = mlContext.BinaryClassification.Trainers.Auto(maxIterations: 25, validationData: validationData);
             var model = autoMlTrainer.Fit(trainData);
@@ -31,7 +43,9 @@ namespace Microsoft.ML.AutoMLPublicAPI2
             // run AutoML on test data
             var transformedOutput = model.Transform(testData);
             var results = mlContext.BinaryClassification.Evaluate(transformedOutput);
-            Console.WriteLine($"Accuracy: {results.Accuracy}");
+            Console.WriteLine($"\r\nAuto Accuracy: {results.Accuracy}");
+
+            Console.ReadLine();
         }
     }
 }

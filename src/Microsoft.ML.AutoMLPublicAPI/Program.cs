@@ -47,7 +47,7 @@ namespace Microsoft.ML.AutoMLPublicAPI
             // run AutoML on test data
             var transformedOutput = model.Transform(testData);
             var results = mlContext.Regression.Evaluate(transformedOutput);
-            Console.WriteLine($"R^2: {results.RSquared}");
+            Console.WriteLine($"\nR^2: {results.RSquared}");
 
             var predictionEngine = model.MakePredictionFunction<Trip, TripPrice>(mlContext);
             var prediction = predictionEngine.Predict(new Trip()
