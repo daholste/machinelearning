@@ -10,9 +10,9 @@ namespace Microsoft.ML.AutoMLPublicAPI2
     {
         public static void Main(string[] args)
         {
-            const string trainDataPath = @"C:\data\sample_train2.csv";
-            const string validationDataPath = @"C:\data\sample_valid2.csv";
-            const string testDataPath = @"C:\data\sample_test2.csv";
+            const string trainDataPath = @"C:\data\train.csv";
+            const string validationDataPath = @"C:\data\valid.csv";
+            const string testDataPath = @"C:\data\test.csv";
             const string labelColName = "Label";
 
             var mlContext = new MLContext();
@@ -25,7 +25,7 @@ namespace Microsoft.ML.AutoMLPublicAPI2
             var testData = textLoader.Read(testDataPath);
 
             // custom preprocessor
-            var autoMlTrainer = mlContext.BinaryClassification.Trainers.Auto(maxIterations: 25, validationData: validationData);
+            var autoMlTrainer = mlContext.BinaryClassification.Trainers.Auto(maxIterations: 3, validationData: validationData);
             var model = autoMlTrainer.Fit(trainData);
 
             // run AutoML on test data
