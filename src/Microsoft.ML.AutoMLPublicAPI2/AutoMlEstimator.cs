@@ -66,9 +66,11 @@ namespace Microsoft.ML.AutoMLPublicAPI2
             // get list of existing columns
             var cols = inputSchema.Columns.ToList();
 
-            // add score column
-            var scoreCol = new SchemaShape.Column("PredictedLabel ", VectorKind.Scalar, BoolType.Instance, false);
-            cols.Add(scoreCol);
+            // add output columns
+            cols.AddRange(new[] {
+                new SchemaShape.Column("Probability", VectorKind.Scalar, NumberType.R4, false),
+                new SchemaShape.Column("PredictedLabel", VectorKind.Scalar, BoolType.Instance, false)
+            });
 
             return new SchemaShape(cols);
         }

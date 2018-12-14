@@ -139,7 +139,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 "LinearSvmBinaryClassifier",
                 "LogisticRegressionBinaryClassifier",
                 "StochasticGradientDescentBinaryClassifier",
-                "SymSgdBinaryClassifier",
+                //"SymSgdBinaryClassifier",
             };
 
             var learners = new List<SuggestedRecipe.SuggestedLearner>();
