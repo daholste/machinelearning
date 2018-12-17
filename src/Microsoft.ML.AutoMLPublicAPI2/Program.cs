@@ -49,23 +49,23 @@ namespace Microsoft.ML.AutoMLPublicAPI2
 
             //////// SDCA
 
-            // preprocess
-            var preprocessorEstimator = mlContext.Transforms.Categorical.OneHotEncoding("Workclass", "Workclass")
-                .Append(mlContext.Transforms.Categorical.OneHotEncoding("Education", "Education"))
-                .Append(mlContext.Transforms.Categorical.OneHotEncoding("MaritalStatus", "MaritalStatus"))
-                .Append(mlContext.Transforms.Categorical.OneHotEncoding("Occupation", "Occupation"))
-                .Append(mlContext.Transforms.Categorical.OneHotEncoding("Relationship", "Relationship"))
-                .Append(mlContext.Transforms.Categorical.OneHotEncoding("Race", "Race"))
-                .Append(mlContext.Transforms.Categorical.OneHotEncoding("Sex", "Sex"))
-                .Append(mlContext.Transforms.Categorical.OneHotEncoding("NativeCountry", "NativeCountry"))
-                .Append(mlContext.Transforms.Concatenate(DefaultColumnNames.Features,
-                    "Age", "Workclass", "Fnlwgt", "Education", "EducationNum", "MaritalStatus", "Occupation", "Relationship",
-                    "Race", "Sex", "CapitalGain", "CapitalLoss", "HoursPerWeek", "NativeCountry"));
+            //// preprocess
+            //var preprocessorEstimator = mlContext.Transforms.Categorical.OneHotEncoding("Workclass", "Workclass")
+            //    .Append(mlContext.Transforms.Categorical.OneHotEncoding("Education", "Education"))
+            //    .Append(mlContext.Transforms.Categorical.OneHotEncoding("MaritalStatus", "MaritalStatus"))
+            //    .Append(mlContext.Transforms.Categorical.OneHotEncoding("Occupation", "Occupation"))
+            //    .Append(mlContext.Transforms.Categorical.OneHotEncoding("Relationship", "Relationship"))
+            //    .Append(mlContext.Transforms.Categorical.OneHotEncoding("Race", "Race"))
+            //    .Append(mlContext.Transforms.Categorical.OneHotEncoding("Sex", "Sex"))
+            //    .Append(mlContext.Transforms.Categorical.OneHotEncoding("NativeCountry", "NativeCountry"))
+            //    .Append(mlContext.Transforms.Concatenate(DefaultColumnNames.Features,
+            //        "Age", "Workclass", "Fnlwgt", "Education", "EducationNum", "MaritalStatus", "Occupation", "Relationship",
+            //        "Race", "Sex", "CapitalGain", "CapitalLoss", "HoursPerWeek", "NativeCountry"));
 
-            // train model
-            var trainer = mlContext.BinaryClassification.Trainers.StochasticDualCoordinateAscent();
-            var estimatorChain = preprocessorEstimator.Append(trainer);
-            var model = estimatorChain.Fit(trainData);
+            //// train model
+            //var trainer = mlContext.BinaryClassification.Trainers.StochasticDualCoordinateAscent();
+            //var estimatorChain = preprocessorEstimator.Append(trainer);
+            //var model = estimatorChain.Fit(trainData);
 
             //////// AutoML
 

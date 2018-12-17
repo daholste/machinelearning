@@ -30,7 +30,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             public readonly TransformInference.SuggestedTransform[] Transforms;
             public struct SuggestedLearner
             {
-                public ComponentCatalog.LoadableClassInfo LoadableClassInfo;
                 public string Settings;
                 public TrainerPipelineNode PipelineNode;
                 public string LearnerName;
@@ -39,7 +38,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 {
                     return new SuggestedLearner
                     {
-                        LoadableClassInfo = LoadableClassInfo,
                         Settings = Settings,
                         PipelineNode = PipelineNode.Clone(),
                         LearnerName = LearnerName
@@ -60,69 +58,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 SuggestedRecipes = suggestedRecipes;
             }
         }
-
-        public static TextLoader.Arguments MyAutoMlInferTextLoaderArguments(IHostEnvironment env,
-            string dataFile, string labelColName)
-        {
-            var h = env.Register("InferRecipesFromData", seed: 0, verbose: false);
-            using (var ch = h.Start("InferRecipesFromData"))
-            {
-                var sample = TextFileSample.CreateFromFullFile(h, dataFile);
-                var splitResult = TextFileContents.TrySplitColumns(h, sample, TextFileContents.DefaultSeparators);
-                var columnPurposes = InferenceUtils.InferColumnPurposes(ch, h, sample, splitResult,
-                    out var hasHeader, labelColName);
-                return new TextLoader.Arguments
-                {
-                    Column = ColumnGroupingInference.GenerateLoaderColumns(columnPurposes),
-                    HasHeader = true,
-                    Separator = splitResult.Separator,
-                    AllowSparse = splitResult.AllowSparse,
-                    AllowQuoting = splitResult.AllowQuote
-                };
-            }
-        }
-
-        public static List<string> GetLearnerSettingsAndSweepParams(IHostEnvironment env, ComponentCatalog.LoadableClassInfo cl, out string settings)
-        {
-            List<string> sweepParams = new List<string>();
-            var ci = cl.Constructor?.GetParameters();
-            if (ci == null)
-            {
-                settings = "";
-                return sweepParams;
-            }
-
-            var suggestedSweepsParser = new SuggestedSweepsParser();
-            StringBuilder learnerSettings = new StringBuilder();
-
-            foreach (var prop in ci)
-            {
-                var fieldInfo = prop.ParameterType?.GetFields(BindingFlags.Public | BindingFlags.Instance);
-
-                foreach (var field in fieldInfo)
-                {
-                    TGUIAttribute[] tgui =
-                        field.GetCustomAttributes(typeof(TGUIAttribute), true) as TGUIAttribute[];
-                    if (tgui == null)
-                        continue;
-                    foreach (var attr in tgui)
-                    {
-                        if (attr.SuggestedSweeps != null)
-                        {
-                            // Build the learner setting.
-                            learnerSettings.Append($" {field.Name}=${field.Name}$");
-
-                            // Build the sweeper.
-                            suggestedSweepsParser.TryParseParameter(attr.SuggestedSweeps, field.FieldType, field.Name, out var sweepValues, out var error);
-                            sweepParams.Add(sweepValues?.ToStringParameter(env));
-                        }
-                    }
-                }
-            }
-            settings = learnerSettings.ToString();
-            return sweepParams;
-        }
-
+        
         /// <summary>
         /// Given a predictor type returns a set of all permissible learners (with their sweeper params, if defined).
         /// </summary>
