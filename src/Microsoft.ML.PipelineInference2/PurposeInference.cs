@@ -73,11 +73,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             private readonly Lazy<string> _columnName;
             private object _cachedData;
 
-            public int ColumnId
-            {
-                get { return _columnId; }
-            }
-
             public bool IsPurposeSuggested { get { return _isPurposeSuggested; } }
 
             public ColumnPurpose SuggestedPurpose

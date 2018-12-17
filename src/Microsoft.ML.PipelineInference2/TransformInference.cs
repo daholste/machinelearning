@@ -1380,10 +1380,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             //h.CheckValue(args, nameof(args));
             //h.Check(args.EstimatedSampleFraction > 0);
 
-            //available transforms in this environment
-            var availableTransforms = env.ComponentCatalog.AllEntryPoints()
-                .Where(x => x.InputKinds?.FirstOrDefault(i => i == typeof(CommonInputs.ITransformInput)) != null
-                    && x.InputKinds?.Any(i => i == typeof(CommonInputs.ICalibratorInput)) != true);
             var dataSample = data.Take(MaxRowsToRead);
 
             // Infer column purposes from data sample.

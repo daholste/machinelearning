@@ -22,11 +22,6 @@ using Microsoft.ML.Trainers.SymSgd;
 
 namespace Microsoft.ML.Runtime.PipelineInference
 {
-    public interface IPipelineNode<TModelType>
-    {
-        T GetPropertyValueByName<T>(string name, T defaultValue);
-    }
-
     public sealed class DataAndModel<TModel>
     {
         public Var<IDataView> OutData { get; }
