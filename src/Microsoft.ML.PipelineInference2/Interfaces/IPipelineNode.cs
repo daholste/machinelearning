@@ -192,7 +192,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
         public override string ToString()
         {
-            return $"{LearnerName}{{{string.Join(", ", SweepParams.Where(p => p != null).Select(p => $"{p.Name}:{p.ProcessedValue()}"))}}}";
+            return $"{LearnerName}{{{string.Join(", ", SweepParams.Where(p => p.RawValue != null).Select(p => $"{p.Name}:{p.ProcessedValue()}"))}}}";
         }
 
         public ParameterSet BuildParameterSet()
