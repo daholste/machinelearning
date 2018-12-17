@@ -58,7 +58,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 SuggestedRecipes = suggestedRecipes;
             }
         }
-        
+
         /// <summary>
         /// Given a predictor type returns a set of all permissible learners (with their sweeper params, if defined).
         /// </summary>

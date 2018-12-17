@@ -39,13 +39,5 @@ namespace Microsoft.ML.Runtime.PipelineInference
         private const Double UniformColumnCountThreshold = 0.98;
 
         public static string[] DefaultSeparators = new[] { "tab", ",", ";", " " };
-
-        /// <summary>
-        /// Attempt to detect text loader arguments.
-        /// The algorithm selects the first 'acceptable' set: the one that recognizes the same number of columns in at
-        /// least <see cref="UniformColumnCountThreshold"/> of the sample's lines,
-        /// and this number of columns is more than 1.
-        /// We sweep on separator, allow sparse and allow quote parameter.
-        /// </summary>
     }
 }

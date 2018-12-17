@@ -70,8 +70,8 @@ namespace Microsoft.ML.AutoMLPublicAPI2
             //////// AutoML
 
             // run AutoML & train model
-            //var trainer = mlContext.BinaryClassification.Trainers.Auto(maxIterations: 25, validationData: validationData);
-            //var model = trainer.Fit(trainData);
+            var trainer = mlContext.BinaryClassification.Trainers.Auto(maxIterations: 25, validationData: validationData);
+            var model = trainer.Fit(trainData);
 
             // run AutoML on test data
             var transformedOutput = model.Transform(testData);
