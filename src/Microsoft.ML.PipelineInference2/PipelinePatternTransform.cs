@@ -28,6 +28,13 @@ namespace Microsoft.ML.PipelineInference
             _predictor = predictor;
         }
 
+        internal PipelinePatternTransform(IHostEnvironment env, ModelLoadContext ctx)
+        {
+            _env = env;
+            ctx.LoadModel<ITransformer, SignatureLoadModel>(env, out _preprocessor, "Preprocessor");
+            ctx.LoadModel<IPredictor, SignatureLoadModel>(env, out _predictor, "Predictor");
+        }
+
         public bool IsRowToRowMapper => true;
 
         public Schema GetOutputSchema(Schema inputSchema)

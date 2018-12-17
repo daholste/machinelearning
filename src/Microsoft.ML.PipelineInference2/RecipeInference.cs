@@ -59,6 +59,27 @@ namespace Microsoft.ML.Runtime.PipelineInference
             }
         }
 
+        public static TextLoader.Arguments MyAutoMlInferTextLoaderArguments(IHostEnvironment env,
+            string dataFile, string labelColName)
+        {
+            var h = env.Register("InferRecipesFromData", seed: 0, verbose: false);
+            using (var ch = h.Start("InferRecipesFromData"))
+            {
+                var sample = TextFileSample.CreateFromFullFile(h, dataFile);
+                var splitResult = TextFileContents.TrySplitColumns(h, sample, TextFileContents.DefaultSeparators);
+                var columnPurposes = InferenceUtils.InferColumnPurposes(ch, h, sample, splitResult,
+                    out var hasHeader, labelColName);
+                return new TextLoader.Arguments
+                {
+                    Column = ColumnGroupingInference.GenerateLoaderColumns(columnPurposes),
+                    HasHeader = true,
+                    Separator = splitResult.Separator,
+                    AllowSparse = splitResult.AllowSparse,
+                    AllowQuoting = splitResult.AllowQuote
+                };
+            }
+        }
+
         /// <summary>
         /// Given a predictor type returns a set of all permissible learners (with their sweeper params, if defined).
         /// </summary>
