@@ -168,4 +168,3 @@ namespace Microsoft.ML.Runtime.PipelineInference
         }
     }
 }
-}
