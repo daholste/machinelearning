@@ -193,7 +193,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     while (cursor.MoveNext())
                     {
                         getter(ref value);
-                        if (VBufferUtils.HasNaNs(value))
+                        if (PipelineInference2.VBufferUtils.HasNaNs(value))
                             return true;
                     }
                     return false;
