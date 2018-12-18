@@ -1,4 +1,5 @@
 ﻿using Microsoft.ML.Runtime;
+using Microsoft.ML.Runtime.PipelineInference;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -14,10 +15,10 @@ namespace Microsoft.ML.PipelineInference2
         /// <param name="alpha1">first parameter</param>
         /// <param name="alpha2">second parameter</param>
         /// <returns>Sample from distribution</returns>
-        public static double SampleFromBeta(IRandom rand, double alpha1, double alpha2)
+        public static double SampleFromBeta(double alpha1, double alpha2)
         {
-            double gamma1 = SampleFromGamma(rand, alpha1);
-            double gamma2 = SampleFromGamma(rand, alpha2);
+            double gamma1 = SampleFromGamma(alpha1);
+            double gamma2 = SampleFromGamma(alpha2);
             return gamma1 / (gamma1 + gamma2);
         }
 
@@ -28,12 +29,12 @@ namespace Microsoft.ML.PipelineInference2
         /// <param name="r">The random number generator to use</param>
         /// <returns>Sample from gamma distribution</returns>
         /// <remarks>Uses Marsaglia and Tsang's fast algorithm</remarks>
-        public static double SampleFromGamma(IRandom r, double alpha)
+        public static double SampleFromGamma(double alpha)
         {
             //Contracts.CheckParam(alpha > 0, nameof(alpha), "alpha must be positive");
 
             if (alpha < 1)
-                return SampleFromGamma(r, alpha + 1) * Math.Pow(r.NextDouble(), 1.0 / alpha);
+                return SampleFromGamma(alpha + 1) * Math.Pow(AutoMlUtils.Random.NextDouble(), 1.0 / alpha);
 
             double d = alpha - 1.0 / 3;
             double c = 1 / Math.Sqrt(9 * d);
@@ -44,10 +45,10 @@ namespace Microsoft.ML.PipelineInference2
             {
                 do
                 {
-                    x = SampleFromGaussian(r);
+                    x = SampleFromGaussian();
                     v = Math.Pow(1.0 + c * x, 3);
                 } while (v <= 0);
-                u = r.NextDouble();
+                u = AutoMlUtils.Random.NextDouble();
                 double xSqr = x * x;
                 if (u < 1.0 - 0.0331 * xSqr * xSqr ||
                     Math.Log(u) < 0.5 * xSqr + d * (1.0 - v + Math.Log(v)))
@@ -63,15 +64,15 @@ namespace Microsoft.ML.PipelineInference2
         /// <param name="rand">A Random to use for the sampling</param>
         /// <returns>a sample</returns>
         /// <remarks>uses Joseph L. Leva's algorithm from "A fast normal random number generator", 1992</remarks>
-        public static double SampleFromGaussian(IRandom rand)
+        public static double SampleFromGaussian()
         {
             double u;
             double v;
             double q;
             do
             {
-                u = rand.NextDouble();
-                v = _vScale * (rand.NextDouble() - 0.5);
+                u = AutoMlUtils.Random.NextDouble();
+                v = _vScale * (AutoMlUtils.Random.NextDouble() - 0.5);
                 double x = u - 0.449871;
                 double y = Math.Abs(v) + 0.386595;
                 q = x * x + y * (0.19600 * y - 0.25472 * x);

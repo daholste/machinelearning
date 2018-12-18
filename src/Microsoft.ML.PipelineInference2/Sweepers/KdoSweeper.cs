@@ -259,14 +259,13 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
                     else
                     {
                         // If Beta flag set, sample from independent Beta distributions instead.
-                        SysRandom rng = new SysRandom();
                         double alpha = 1 + 15 * fitness;
                         foreach (int index in numericParamIndices)
                         {
                             const double epsCutoff = 1e-10;
                             double eps = Math.Min(Math.Max(child[index], epsCutoff), 1 - epsCutoff);
                             double beta = alpha / eps - alpha;
-                            child[index] = (Float)PipelineInference2.Stats.SampleFromBeta(rng, alpha, beta);
+                            child[index] = (Float)PipelineInference2.Stats.SampleFromBeta(alpha, beta);
                         }
                     }
                 }
