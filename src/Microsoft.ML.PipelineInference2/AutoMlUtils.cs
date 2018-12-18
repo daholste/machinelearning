@@ -38,11 +38,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return host.Start("channel");
         }
 
-        public static void Assert(bool boolVal)
+        public static void Assert(bool boolVal, string message = null)
         {
             if(!boolVal)
             {
-                throw new Exception("Assertion failed");
+                message = message ?? "Assertion failed";
+                throw new Exception(message);
             }
         }
 
