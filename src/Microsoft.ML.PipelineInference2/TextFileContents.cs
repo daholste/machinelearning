@@ -47,11 +47,11 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// and this number of columns is more than 1.
         /// We sweep on separator, allow sparse and allow quote parameter.
         /// </summary>
-        public static ColumnSplitResult TrySplitColumns(IHostEnvironment env, IMultiStreamSource source,
+        public static ColumnSplitResult TrySplitColumns(IMultiStreamSource source,
             string[] separatorCandidates, bool? allowSparse = null, bool? allowQuote = null, bool skipStrictValidation = false)
         {
             //Contracts.CheckValue(env, nameof(env));
-            var h = env.Register("CandidateLoader");
+            //var h = env.Register("CandidateLoader");
             //h.CheckValue(source, nameof(source));
             //h.CheckNonEmpty(separatorCandidates, nameof(separatorCandidates));
             // Default value for sparse and quote is true.
@@ -63,40 +63,40 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 quote = new[] { allowQuote.Value };
             bool foundAny = false;
             var result = default(ColumnSplitResult);
-            using (var ch = env.Register("SplitColumns").Start("SplitColumns"))
+            //using (var ch = env.Register("SplitColumns").Start("SplitColumns"))
+            //{
+            foreach (var perm in (from _allowSparse in sparse
+                                    from _allowQuote in quote
+                                    from _sep in separatorCandidates
+                                    select new { _allowSparse, _allowQuote, _sep }))
             {
-                foreach (var perm in (from _allowSparse in sparse
-                                      from _allowQuote in quote
-                                      from _sep in separatorCandidates
-                                      select new { _allowSparse, _allowQuote, _sep }))
+                var args = new TextLoader.Arguments
                 {
-                    var args = new TextLoader.Arguments
-                    {
-                        Column = new[] { TextLoader.Column.Parse("C:TX:0-**") },
-                        Separator = perm._sep,
-                        AllowQuoting = perm._allowQuote,
-                        AllowSparse = perm._allowSparse
-                    };
+                    Column = new[] { TextLoader.Column.Parse("C:TX:0-**") },
+                    Separator = perm._sep,
+                    AllowQuoting = perm._allowQuote,
+                    AllowSparse = perm._allowSparse
+                };
 
-                    if (TryParseFile(ch, args, source, skipStrictValidation, out result))
-                    {
-                        foundAny = true;
-                        break;
-                    }
-                }
-
-                if (foundAny)
-                    ch.Info("Discovered {0} columns using separator '{1}'.", result.ColumnCount, result.Separator);
-                else
+                if (TryParseFile(args, source, skipStrictValidation, out result))
                 {
-                    // REVIEW: May need separate messages for GUI-specific and non-specific. This component can be used
-                    // by itself outside the GUI.
-                    ch.Info("Couldn't determine columns in the file using separators {0}. Does the input file consist of only a single column? "
-                        + "If so, in TLC GUI, please close the import wizard, and then, in the loader settings to the right, manually add a column, "
-                        + "choose a name, and set source index to 0.",
-                        string.Join(",", separatorCandidates.Select(c => string.Format("'{0}'", GetSeparatorString(c)))));
+                    foundAny = true;
+                    break;
                 }
             }
+
+            //if (foundAny)
+                //ch.Info("Discovered {0} columns using separator '{1}'.", result.ColumnCount, result.Separator);
+            //else
+            //{
+                // REVIEW: May need separate messages for GUI-specific and non-specific. This component can be used
+                // by itself outside the GUI.
+                //ch.Info("Couldn't determine columns in the file using separators {0}. Does the input file consist of only a single column? "
+                  //  + "If so, in TLC GUI, please close the import wizard, and then, in the loader settings to the right, manually add a column, "
+                   // + "choose a name, and set source index to 0.",
+                   // string.Join(",", separatorCandidates.Select(c => string.Format("'{0}'", GetSeparatorString(c)))));
+            //}
+            //}
             return foundAny ? result : new ColumnSplitResult(false, null, true, true, 0);
         }
 
@@ -108,7 +108,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return sep;
         }
 
-        private static bool TryParseFile(IChannel ch, TextLoader.Arguments args, IMultiStreamSource source, bool skipStrictValidation, out ColumnSplitResult result)
+        private static bool TryParseFile(TextLoader.Arguments args, IMultiStreamSource source, bool skipStrictValidation, out ColumnSplitResult result)
         {
             result = default(ColumnSplitResult);
             //try
@@ -151,9 +151,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     return false;
 
                 result = new ColumnSplitResult(true, args.Separator, args.AllowQuoting, args.AllowSparse, mostCommon.Key);
-                ch.Trace("Discovered {0} columns using separator '{1}'", mostCommon.Key, args.Separator);
-                foreach (var msg in messages)
-                    ch.Send(msg);
+                //ch.Trace("Discovered {0} columns using separator '{1}'", mostCommon.Key, args.Separator);
+                //foreach (var msg in messages)
+                //    ch.Send(msg);
                 return true;
             }
             //}

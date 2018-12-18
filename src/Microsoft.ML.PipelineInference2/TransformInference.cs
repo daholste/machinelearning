@@ -266,16 +266,16 @@ namespace Microsoft.ML.Runtime.PipelineInference
         {
             bool IncludeFeaturesOverride { get; set; }
 
-            IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch);
+            IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs);
         }
 
         public abstract class TransformInferenceExpertBase : ITransformInferenceExpert
         {
             public bool IncludeFeaturesOverride { get; set; }
 
-            public abstract IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch);
+            public abstract IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs);
 
-            protected readonly IHostEnvironment Env;
+            protected readonly MLContext Env;
 
             public TransformInferenceExpertBase()
             {
@@ -337,7 +337,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         {
             public sealed class AutoLabel : TransformInferenceExpertBase
             {
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
+                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs)
                 {
                     var lastLabelColId = Array.FindLastIndex(columns, x => x.Purpose == ColumnPurpose.Label);
                     if (lastLabelColId < 0)
@@ -364,7 +364,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     if (col.Type.IsText())
                     {
                         col.GetUniqueValueCounts<ReadOnlyMemory<char>>(out var unique, out var _, out var _);
-                        ch.Info("Label column '{0}' is text. Suggested auto-labeling.", col.ColumnName);
+                        //ch.Info("Label column '{0}' is text. Suggested auto-labeling.", col.ColumnName);
 
                         var args = new TransformString("AutoLabel", columnArgument.ToString());
                         string dest = DefaultColumnNames.Label;
@@ -385,15 +385,15 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                         if (unique == 1)
                         {
-                            ch.Warning("Label column '{0}' has only one value in the sample. Maybe the label column is incorrect?", col.ColumnName);
+                            //ch.Warning("Label column '{0}' has only one value in the sample. Maybe the label column is incorrect?", col.ColumnName);
                         }
                         else if (unique > 100)
                         {
-                            ch.Warning("Label column '{0}' has {1} different values in the sample. Multi-class classification might not be desirable with so many values.", col.ColumnName, unique);
+                            //ch.Warning("Label column '{0}' has {1} different values in the sample. Multi-class classification might not be desirable with so many values.", col.ColumnName, unique);
                         }
                         else if (unique > 2)
                         {
-                            ch.Info("Label column '{0}' has {1} different values in the sample.", col.ColumnName, unique);
+                            //ch.Info("Label column '{0}' has {1} different values in the sample.", col.ColumnName, unique);
                         }
                     }
                     else if (col.ColumnName != DefaultColumnNames.Label)
@@ -422,7 +422,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public sealed class GroupIdHashRename : TransformInferenceExpertBase
             {
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
+                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs)
                 {
                     var firstGroupColId = Array.FindIndex(columns, x => x.Purpose == ColumnPurpose.Group);
                     if (firstGroupColId < 0)
@@ -448,7 +448,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     if (col.Type.IsText())
                     {
-                        ch.Info("Group Id column '{0}' is text. Suggested hashing.", col.ColumnName);
+                        //ch.Info("Group Id column '{0}' is text. Suggested hashing.", col.ColumnName);
                         // REVIEW: we could potentially apply HashJoin to vectors of text.
                         var args = new TransformString("Hash", columnArgument.ToString());
                         string dest = DefaultColumnNames.GroupId;
@@ -471,7 +471,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     }
                     else if (col.ColumnName != DefaultColumnNames.GroupId)
                     {
-                        ch.Warning("Group Id column '{0}' is not text. Couldn't determine correct transformation.");
+                        //ch.Warning("Group Id column '{0}' is not text. Couldn't determine correct transformation.");
                         var args = new TransformString("Copy", columnArgument.ToString());
                         string dest = DefaultColumnNames.GroupId;
                         string source = columnNameQuoted.ToString();
@@ -496,12 +496,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public sealed class LabelAdvisory : TransformInferenceExpertBase
             {
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
+                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs)
                 {
                     var firstLabelColId = Array.FindIndex(columns, x => x.Purpose == ColumnPurpose.Label);
                     if (firstLabelColId < 0)
                     {
-                        ch.Info("Label column not present in the dataset. This is likely an unsupervised learning problem.");
+                        //ch.Info("Label column not present in the dataset. This is likely an unsupervised learning problem.");
                         yield break;
                     }
 
@@ -511,13 +511,13 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     if (col.Type.IsKnownSizeVector() && col.Type.ItemType() == NumberType.R4)
                     {
-                        ch.Info("Label column '{0}' has type {1}, this can be only a multi-output regression problem.", col.ColumnName, col.Type);
+                        //ch.Info("Label column '{0}' has type {1}, this can be only a multi-output regression problem.", col.ColumnName, col.Type);
                         yield break;
                     }
 
                     if (col.Type != NumberType.R4)
                     {
-                        ch.Warning("Label column '{0}' has type {1} which is not supported by any learner.", col.ColumnName, col.Type);
+                        //ch.Warning("Label column '{0}' has type {1} which is not supported by any learner.", col.ColumnName, col.Type);
                         yield break;
                     }
 
@@ -528,22 +528,22 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     if (unique == 1)
                     {
-                        ch.Warning("Label column '{0}' has only one value in the sample. Maybe the label column is incorrect?", col.ColumnName);
+                        //ch.Warning("Label column '{0}' has only one value in the sample. Maybe the label column is incorrect?", col.ColumnName);
                     }
                     else if (unique > 100)
                     {
-                        ch.Info("Label column '{0}' has {1} different values in the sample. This is likely a regression problem.", col.ColumnName, unique);
+                        //ch.Info("Label column '{0}' has {1} different values in the sample. This is likely a regression problem.", col.ColumnName, unique);
                     }
                     else if (unique > 2)
                     {
-                        ch.Info("Label column '{0}' has {1} different values in the sample. This can be treated as multi-class or regression problem.", col.ColumnName, unique);
+                        //ch.Info("Label column '{0}' has {1} different values in the sample. This can be treated as multi-class or regression problem.", col.ColumnName, unique);
                     }
                 }
             }
 
             public sealed class Categorical : TransformInferenceExpertBase
             {
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
+                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs)
                 {
                     bool foundCat = false;
                     bool foundCatHash = false;
@@ -585,7 +585,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         }
                         else
                         {
-                            ch.Info("Categorical column '{0}' has extremely high cardinality. Suggested hash-based category encoding.", column.ColumnName);
+                            //ch.Info("Categorical column '{0}' has extremely high cardinality. Suggested hash-based category encoding.", column.ColumnName);
                             foundCatHash = true;
                             colSpecCatHash.Append(columnArgument);
                             catHashColumnsNew.Add(new OneHotHashEncodingEstimator.ColumnInfo(columnNameQuoted.ToString(), columnNameQuoted.ToString()));
@@ -603,7 +603,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         var input = new OneHotEncodingEstimator(Env, catColumnsNew.ToArray());
                         featureCols.AddRange(catColumnsNew.Select(c => c.Output));
 
-                        ch.Info("Suggested dictionary-based category encoding for categorical columns.");
+                        //ch.Info("Suggested dictionary-based category encoding for categorical columns.");
                         var args = new TransformString("Cat", colSpecCat.ToString());
                         yield return new SuggestedTransform("Convert categorical features to indicator vectors", args,
                             GetType(), new TransformPipelineNode(input), -1, routingStructure);
@@ -619,7 +619,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                         var input = new OneHotHashEncodingEstimator(Env, catHashColumnsNew.ToArray());
 
-                        ch.Info("Suggested hash-based category encoding for categorical columns.");
+                        //ch.Info("Suggested hash-based category encoding for categorical columns.");
                         var args = new TransformString("CatHash", colSpecCatHash.ToString());
                         yield return new SuggestedTransform("Hash categorical features and convert to indicator vectors", args,
                             GetType(), new TransformPipelineNode(input), -1, routingStructure);
@@ -653,7 +653,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public sealed class Boolean : TransformInferenceExpertBase
             {
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
+                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs)
                 {
                     var columnArgument = new StringBuilder();
                     var columnNameQuoted = new StringBuilder();
@@ -686,7 +686,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     if (columnArgument.Length > 0)
                     {
-                        ch.Info("Suggested conversion to numeric for boolean features.");
+                        //ch.Info("Suggested conversion to numeric for boolean features.");
                         var args = new TransformString("Convert", $"{columnArgument}type=R4");
                         var input = new ConvertingEstimator(Env, newColumns.ToArray());
                         ColumnRoutingStructure.AnnotatedName[] columnsSource =
@@ -808,7 +808,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             routingStructure);
                 }
 
-                public static SuggestedTransform TextTransformUnigramTriChar(IHostEnvironment env, string srcColumn, string dstColumn, string arg, Type transformType)
+                public static SuggestedTransform TextTransformUnigramTriChar(MLContext env, string srcColumn, string dstColumn, string arg, Type transformType)
                 {
                     StringBuilder columnArgument = InferenceHelpers.GetTextTransformUnigramTriCharArgument(srcColumn, dstColumn);
 
@@ -824,7 +824,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         transformType, new TransformPipelineNode(input));
                 }
 
-                public static SuggestedTransform TextTransformBigramTriChar(IHostEnvironment env, string srcColumn, string dstColumn, string arg, Type transformType)
+                public static SuggestedTransform TextTransformBigramTriChar(MLContext env, string srcColumn, string dstColumn, string arg, Type transformType)
                 {
                     StringBuilder columnArgument = InferenceHelpers.GetTextTransformBigramTriCharArgument(srcColumn, dstColumn);
 
@@ -862,7 +862,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             // Lots of transforms applied here, with many columns produced.
             public sealed class SdcaTransform : TransformInferenceExpertBase
             {
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
+                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs)
                 {
                     List<string> tempColumnList = new List<string>();
 
@@ -961,7 +961,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public sealed class Text : TransformInferenceExpertBase
             {
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
+                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs)
                 {
                     var featureCols = new List<string>();
 
@@ -969,7 +969,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     {
                         if (!column.Type.ItemType().IsText() || column.Purpose != ColumnPurpose.TextFeature)
                             continue;
-                        ch.Info("Suggested text featurization for text column '{0}'.", column.ColumnName);
+                        //ch.Info("Suggested text featurization for text column '{0}'.", column.ColumnName);
 
                         var columnDestSuffix = "_tf";
                         var columnNameSafe = column.ColumnName;
@@ -1010,7 +1010,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public sealed class TextUniGramTriGram : TransformInferenceExpertBase
             {
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
+                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs)
                 {
                     List<string> textColumnNames =
                         columns.Where(
@@ -1051,7 +1051,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public sealed class TextBiGramTriGram : TransformInferenceExpertBase
             {
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
+                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs)
                 {
                     List<string> textColumnNames =
                         columns.Where(
@@ -1092,7 +1092,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public sealed class NumericMissing : TransformInferenceExpertBase
             {
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
+                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs)
                 {
                     bool found = false;
                     var columnArgument = new StringBuilder();
@@ -1104,7 +1104,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         if (!column.HasMissing)
                             continue;
 
-                        ch.Info("Column '{0}' has missing values. Suggested missing indicator encoding.", column.ColumnName);
+                        //ch.Info("Column '{0}' has missing values. Suggested missing indicator encoding.", column.ColumnName);
                         found = true;
 
                         columnArgument.Append("col=");
@@ -1151,7 +1151,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     return false;
                 }
 
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
+                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs)
                 {
                     var selectedColumns = columns.Where(c => !IgnoreColumn(c.Purpose)).ToArray();
                     var colList = selectedColumns.Select(c => c.ColumnName).ToArray();
@@ -1229,7 +1229,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public sealed class NameColumnConcatRename : TransformInferenceExpertBase
             {
-                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs, IChannel ch)
+                public override IEnumerable<SuggestedTransform> Apply(IntermediateColumn[] columns, Arguments inferenceArgs)
                 {
                     int count = 0;
                     bool isAllText = true;
@@ -1288,12 +1288,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     }
                     else if (count > 1)
                     {
-                        if (!isAllText)
-                            ch.Warning("Not all name columns are textual. Ignored non-textual name columns.");
+                        //if (!isAllText)
+                        //    ch.Warning("Not all name columns are textual. Ignored non-textual name columns.");
                         if (string.IsNullOrWhiteSpace(colSpecTextOnly.ToString()))
                             yield break;
 
-                        ch.Info("Suggested grouping name columns into one vector.");
+                        //ch.Info("Suggested grouping name columns into one vector.");
                         var quoutedArgument = new StringBuilder();
                         var needQuoting = false;
                         foreach (var column in colSpecTextOnly)
@@ -1330,10 +1330,10 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// <summary>
         /// Automatically infer transforms for the data view
         /// </summary>
-        public static InferenceResult InferTransforms(IHostEnvironment env, IDataView data, PurposeInference.Column[] purposes, Arguments args)
+        public static InferenceResult InferTransforms(MLContext env, IDataView data, PurposeInference.Column[] purposes, Arguments args)
         {
             //Contracts.CheckValue(env, nameof(env));
-            var h = env.Register("InferTransforms");
+            //var h = env.Register("InferTransforms");
             //h.CheckValue(data, nameof(data));
             //h.CheckNonEmpty(purposes, nameof(purposes));
             //h.CheckValue(args, nameof(args));
@@ -1341,42 +1341,42 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             data = data.Take(MaxRowsToRead);
             var cols = purposes.Where(x => !data.Schema.IsHidden(x.ColumnIndex)).Select(x => new IntermediateColumn(data, x)).ToArray();
-            using (var rootCh = h.Start("InferTransforms"))
+            //using (var rootCh = h.Start("InferTransforms"))
+            //{
+            var list = new List<SuggestedTransform>();
+            int atomicGroupId = args.AtomicIdOffset;
+            var includeFeaturesOverride = false;
+            foreach (var expert in GetExperts(args.ExcludeFeaturesConcatTransforms))
             {
-                var list = new List<SuggestedTransform>();
-                int atomicGroupId = args.AtomicIdOffset;
-                var includeFeaturesOverride = false;
-                foreach (var expert in GetExperts(args.ExcludeFeaturesConcatTransforms))
+                //using (var ch = h.Start(expert.GetType().ToString()))
+                //{
+                expert.IncludeFeaturesOverride = includeFeaturesOverride;
+                SuggestedTransform[] suggestions = expert.Apply(cols, args).ToArray();
+                includeFeaturesOverride |= expert.IncludeFeaturesOverride;
+
+                // Set level and group values.
+                for (int i = 0; i < suggestions.Length; i++)
                 {
-                    using (var ch = h.Start(expert.GetType().ToString()))
-                    {
-                        expert.IncludeFeaturesOverride = includeFeaturesOverride;
-                        SuggestedTransform[] suggestions = expert.Apply(cols, args, ch).ToArray();
-                        includeFeaturesOverride |= expert.IncludeFeaturesOverride;
-
-                        // Set level and group values.
-                        for (int i = 0; i < suggestions.Length; i++)
-                        {
-                            suggestions[i].AtomicGroupId = atomicGroupId;
-                            suggestions[i].RoutingStructure.Level = args.Level;
-                        }
-
-                        list.AddRange(suggestions);
-                        if (suggestions.Length > 0)
-                            atomicGroupId++;
-                    }
+                    suggestions[i].AtomicGroupId = atomicGroupId;
+                    suggestions[i].RoutingStructure.Level = args.Level;
                 }
 
-                if (list.Count == 0)
-                    rootCh.Info("No transforms are needed for the data.");
-                return new InferenceResult(list.ToArray());
+                list.AddRange(suggestions);
+                if (suggestions.Length > 0)
+                    atomicGroupId++;
+                //}
             }
+
+            //if (list.Count == 0)
+                //rootCh.Info("No transforms are needed for the data.");
+            return new InferenceResult(list.ToArray());
+            //}
         }
 
-        public static SuggestedTransform[] InferTransforms(IHostEnvironment env, IDataView data, Arguments args, RoleMappedData dataRoles)
+        public static SuggestedTransform[] InferTransforms(MLContext env, IDataView data, Arguments args, RoleMappedData dataRoles)
         {
             //Contracts.CheckValue(env, nameof(env));
-            var h = env.Register("InferTransforms");
+            //var h = env.Register("InferTransforms");
             //h.CheckValue(data, nameof(data));
             //h.CheckValue(args, nameof(args));
             //h.Check(args.EstimatedSampleFraction > 0);
@@ -1406,10 +1406,10 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 .Contains(t.AtomicGroupId)).ToArray();*/
         }
 
-        public static SuggestedTransform[] InferConcatNumericFeatures(IHostEnvironment env, IDataView data, Arguments args, RoleMappedData dataRoles)
+        public static SuggestedTransform[] InferConcatNumericFeatures(MLContext env, IDataView data, Arguments args, RoleMappedData dataRoles)
         {
             //Contracts.CheckValue(env, nameof(env));
-            var h = env.Register("InferConcatNumericFeatures");
+            //var h = env.Register("InferConcatNumericFeatures");
             //h.CheckValue(data, nameof(data));
             //h.CheckValue(args, nameof(args));
             //h.Check(args.EstimatedSampleFraction > 0);
@@ -1426,24 +1426,24 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 && !args.ExcludedColumnIndices.Contains(x.ColumnIndex))
                 .Select(x => new IntermediateColumn(data, x))
                 .ToArray();
-            using (var rootCh = h.Start("InferConcatNumericFeatures"))
-            {
-                var list = new List<SuggestedTransform>();
-                int atomicGroupId = 0;
-                var expert = new Experts.FeaturesColumnConcatRenameNumericOnly();
+            //using (var rootCh = h.Start("InferConcatNumericFeatures"))
+            //{
+            var list = new List<SuggestedTransform>();
+            int atomicGroupId = 0;
+            var expert = new Experts.FeaturesColumnConcatRenameNumericOnly();
 
-                using (var ch = h.Start(expert.GetType().ToString()))
-                {
-                    SuggestedTransform[] suggestions = expert.Apply(cols, args, ch).ToArray();
-                    for (int i = 0; i < suggestions.Length; i++)
-                        suggestions[i].AtomicGroupId = atomicGroupId;
-                    list.AddRange(suggestions);
-                }
+            //using (var ch = h.Start(expert.GetType().ToString()))
+            //{
+            SuggestedTransform[] suggestions = expert.Apply(cols, args).ToArray();
+            for (int i = 0; i < suggestions.Length; i++)
+                suggestions[i].AtomicGroupId = atomicGroupId;
+            list.AddRange(suggestions);
+            //}
 
-                if (list.Count == 0)
-                    rootCh.Info("No transforms are needed for the data.");
-                return list.ToArray();
-            }
+            //if (list.Count == 0)
+                //rootCh.Info("No transforms are needed for the data.");
+            return list.ToArray();
+           // }
         }
     }
 }

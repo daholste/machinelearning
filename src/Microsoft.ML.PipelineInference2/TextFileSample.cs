@@ -83,7 +83,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// 4. Determine seek locations and read the chunks.
         /// 5. Stitch and return a <see cref="TextFileSample"/>.
         /// </summary>
-        public static TextFileSample CreateFromFullFile(IHostEnvironment env, string path)
+        public static TextFileSample CreateFromFullFile(string path)
         {
             //Contracts.CheckValue(env, nameof(env));
             //Contracts.CheckNonEmpty(path, nameof(path));

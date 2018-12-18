@@ -22,7 +22,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
     /// </summary>
     public sealed class PipelinePattern
     {
-        private readonly IHostEnvironment _env;
+        private readonly MLContext _env;
         public readonly TransformInference.SuggestedTransform[] Transforms;
         public readonly RecipeInference.SuggestedRecipe.SuggestedLearner Learner;
         public PipelineSweeperRunSummary PerformanceSummary { get; set; }
@@ -31,7 +31,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
         public PipelinePattern(TransformInference.SuggestedTransform[] transforms,
             RecipeInference.SuggestedRecipe.SuggestedLearner learner,
-            string loaderSettings, IHostEnvironment env, PipelineSweeperRunSummary summary = null)
+            string loaderSettings, MLContext env, PipelineSweeperRunSummary summary = null)
         {
             // Make sure internal pipeline nodes and sweep params are cloned, not shared.
             // Cloning the transforms and learner rather than assigning outright
@@ -56,17 +56,17 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// Runs a train-test experiment on the current pipeline
         /// </summary>
         public void RunTrainTestExperiment(IDataView trainData, IDataView testData,
-            SupportedMetric metric, MacroUtils.TrainerKinds trainerKind, IHostEnvironment env,
-            IChannel ch, out double testMetricValue)
+            SupportedMetric metric, MacroUtils.TrainerKinds trainerKind, MLContext env,
+            out double testMetricValue)
         {
-            var pipelineTransformer = TrainTransformer(trainData, ch);
+            var pipelineTransformer = TrainTransformer(trainData);
             var scoredTestData = pipelineTransformer.Transform(testData);
             var ctx = new BinaryClassificationContext(env);
             var metrics = ctx.Evaluate(scoredTestData);
             testMetricValue = metrics.Accuracy;
         }
 
-        public ITransformer TrainTransformer(IDataView trainData, IChannel ch)
+        public ITransformer TrainTransformer(IDataView trainData)
         {
             // apply transforms to trian and test data
             IEstimator<ITransformer> estimatorChain = new EstimatorChain<ITransformer>();
@@ -98,7 +98,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             // train learner
             var calibratorFactory = new PlattCalibratorTrainerFactory();
             var caliTrainer = calibratorFactory?.CreateComponent(_env);
-            var predictor = TrainUtils.Train(_env, ch, roleMappedTrainData, learner, calibratorFactory, 1000000000);
+            var predictor = TrainUtils.Train(_env, AutoMlUtils.MakeDummyChannel(), roleMappedTrainData, learner, calibratorFactory, 1000000000);
             return new PipelinePatternTransform(_env, transformerChain, predictor);
         }
     }

@@ -10,14 +10,8 @@ using Microsoft.ML.Runtime.CommandLine;
 using Microsoft.ML.Runtime.EntryPoints;
 using Microsoft.ML.Runtime.PipelineInference;
 
-[assembly: EntryPointModule(typeof(IterationTerminator.Arguments))]
-[assembly: EntryPointModule(typeof(ISupportITerminatorFactory))]
-
 namespace Microsoft.ML.Runtime.PipelineInference
 {
-    [TlcModule.ComponentKind("SearchTerminator")]
-    public interface ISupportITerminatorFactory : IComponentFactory<ITerminator> { }
-
     public sealed class IterationTerminator : ITerminator
     {
         private readonly int _finalHistoryLength;
@@ -25,12 +19,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
         private readonly TimeSpan? _maxRunTime;
 
         [TlcModule.Component(Name = "IterationLimited", FriendlyName = "Pipeline Sweep Iteration Terminator", Desc = "Terminators a sweep based on total number of iterations.")]
-        public sealed class Arguments : ISupportITerminatorFactory
+        public sealed class Arguments
         {
             //[Argument(ArgumentType.Required, HelpText = "Total number of iterations.", ShortName = "length")]
             public int FinalHistoryLength;
 
-            public ITerminator CreateComponent(IHostEnvironment env) => new IterationTerminator(FinalHistoryLength);
+            public ITerminator CreateComponent(MLContext env) => new IterationTerminator(FinalHistoryLength);
         }
 
         public IterationTerminator(int finalHistoryLength, TimeSpan? maxRunTime = null,

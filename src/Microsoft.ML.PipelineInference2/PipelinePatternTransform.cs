@@ -18,9 +18,9 @@ namespace Microsoft.ML.PipelineInference
 
         private readonly ITransformer _preprocessor;
         private readonly IPredictor _predictor;
-        private readonly IHostEnvironment _env;
+        private readonly MLContext _env;
 
-        internal PipelinePatternTransform(IHostEnvironment env, ITransformer preprocessor,
+        internal PipelinePatternTransform(MLContext env, ITransformer preprocessor,
             IPredictor predictor)
         {
             _env = env;
@@ -28,7 +28,7 @@ namespace Microsoft.ML.PipelineInference
             _predictor = predictor;
         }
 
-        internal PipelinePatternTransform(IHostEnvironment env, ModelLoadContext ctx)
+        internal PipelinePatternTransform(MLContext env, ModelLoadContext ctx)
         {
             _env = env;
             ctx.LoadModel<ITransformer, SignatureLoadModel>(env, out _preprocessor, "Preprocessor");

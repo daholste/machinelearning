@@ -59,32 +59,32 @@ namespace Microsoft.ML.Runtime.PipelineInference
             }
         }
 
-        public static TextLoader.Arguments MyAutoMlInferTextLoaderArguments(IHostEnvironment env,
+        public static TextLoader.Arguments MyAutoMlInferTextLoaderArguments(MLContext env,
             string dataFile, string labelColName)
         {
-            var h = env.Register("InferRecipesFromData", seed: 0, verbose: false);
-            using (var ch = h.Start("InferRecipesFromData"))
+            //var h = env.Register("InferRecipesFromData", seed: 0, verbose: false);
+            //using (var ch = h.Start("InferRecipesFromData"))
+            //{
+            var sample = TextFileSample.CreateFromFullFile(dataFile);
+            var splitResult = TextFileContents.TrySplitColumns(sample, TextFileContents.DefaultSeparators);
+            var columnPurposes = InferenceUtils.InferColumnPurposes(env, sample, splitResult,
+                out var hasHeader, labelColName);
+            return new TextLoader.Arguments
             {
-                var sample = TextFileSample.CreateFromFullFile(h, dataFile);
-                var splitResult = TextFileContents.TrySplitColumns(h, sample, TextFileContents.DefaultSeparators);
-                var columnPurposes = InferenceUtils.InferColumnPurposes(ch, h, sample, splitResult,
-                    out var hasHeader, labelColName);
-                return new TextLoader.Arguments
-                {
-                    Column = ColumnGroupingInference.GenerateLoaderColumns(columnPurposes),
-                    HasHeader = true,
-                    Separator = splitResult.Separator,
-                    AllowSparse = splitResult.AllowSparse,
-                    AllowQuoting = splitResult.AllowQuote
-                };
-            }
+                Column = ColumnGroupingInference.GenerateLoaderColumns(columnPurposes),
+                HasHeader = true,
+                Separator = splitResult.Separator,
+                AllowSparse = splitResult.AllowSparse,
+                AllowQuoting = splitResult.AllowQuote
+            };
+            //}
         }
 
         /// <summary>
         /// Given a predictor type returns a set of all permissible learners (with their sweeper params, if defined).
         /// </summary>
         /// <returns>Array of viable learners.</returns>
-        public static SuggestedRecipe.SuggestedLearner[] AllowedLearners(IHostEnvironment env, MacroUtils.TrainerKinds trainerKind)
+        public static SuggestedRecipe.SuggestedLearner[] AllowedLearners(MLContext env, MacroUtils.TrainerKinds trainerKind)
         {
             // for binary classification only
             var learnerNames = new[]

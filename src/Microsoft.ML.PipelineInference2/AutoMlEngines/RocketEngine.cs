@@ -38,7 +38,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
         [TlcModule.Component(Name = "Rocket", FriendlyName = "Rocket Engine",
             Desc = "AutoML engine that consists of distinct, hierarchical stages of operation.")]
-        public sealed class Arguments : ISupportIPipelineOptimizerFactory
+        public sealed class Arguments
         {
             public const int TopKLearners = 3;
             public const int SecondRoundTrialsPerLearner = 5;
@@ -46,14 +46,14 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public int NumInitializationPipelines { get; set; }
 
-            public IPipelineOptimizer CreateComponent(IHostEnvironment env) {
+            public IPipelineOptimizer CreateComponent(MLContext env) {
                 NumInitializationPipelines = new KdoSweeper.Arguments().NumberInitialPopulation;
                 return new RocketEngine(env, this);
             }
         }
 
-        public RocketEngine(IHostEnvironment env, Arguments args)
-            : base(env, env.Register("RocketEngine(AutoML)"))
+        public RocketEngine(MLContext env, Arguments args)
+            : base(env)
         {
             _currentStage = (int)Stages.First;
             _topK = Arguments.TopKLearners;

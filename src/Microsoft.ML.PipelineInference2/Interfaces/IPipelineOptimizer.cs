@@ -10,8 +10,6 @@ using Microsoft.ML.Runtime.EntryPoints;
 using Microsoft.ML.Runtime.PipelineInference;
 using Microsoft.ML.Runtime.Sweeper.Algorithms;
 
-[assembly: EntryPointModule(typeof(ISupportIPipelineOptimizerFactory))]
-
 namespace Microsoft.ML.Runtime.PipelineInference
 {
     /// <summary>
@@ -32,9 +30,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
         void UpdateLearners(RecipeInference.SuggestedRecipe.SuggestedLearner[] availableLearners);
     }
 
-    [TlcModule.ComponentKind("AutoMlEngine")]
-    public interface ISupportIPipelineOptimizerFactory : IComponentFactory<IPipelineOptimizer> { }
-
     public abstract class PipelineOptimizerBase : IPipelineOptimizer
     {
         protected TransformInference.SuggestedTransform[] AvailableTransforms;
@@ -43,20 +38,18 @@ namespace Microsoft.ML.Runtime.PipelineInference
         protected IDataView FullyTransformedData;
         protected AutoInference.DependencyMap DependencyMapping;
         protected RoleMappedData DataRoles;
-        protected readonly IHostEnvironment Env;
-        protected readonly IHost Host;
+        protected readonly MLContext Env;
         protected readonly Dictionary<long, bool> TransformsMaskValidity;
         protected readonly HashSet<string> VisitedPipelines;
         protected readonly SweeperProbabilityUtils ProbUtils;
         protected bool IsMaximizingMetric;
 
-        protected PipelineOptimizerBase(IHostEnvironment env, IHost host)
+        protected PipelineOptimizerBase(MLContext env)
         {
             Env = env;
-            Host = host;
             TransformsMaskValidity = new Dictionary<long, bool>();
             VisitedPipelines = new HashSet<string>();
-            ProbUtils = new SweeperProbabilityUtils(host);
+            ProbUtils = new SweeperProbabilityUtils(AutoMlUtils.MakeDummyIHost());
         }
 
         public abstract PipelinePattern[] GetNextCandidates(IEnumerable<PipelinePattern> history, int numberOfCandidates, RoleMappedData dataRoles);
@@ -139,7 +132,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             learner.PipelineNode.HyperSweeperParamSet = proposedParamSet;
 
             var generatorSet = hyperParams.Select(AutoMlUtils.ToIValueGenerator).ToArray();
-            var values = SweeperProbabilityUtils.ParameterSetAsFloatArray(Host, generatorSet, proposedParamSet, false);
+            var values = SweeperProbabilityUtils.ParameterSetAsFloatArray(AutoMlUtils.MakeDummyIHost(), generatorSet, proposedParamSet, false);
 
             // Update hyperparameters.
             for (int i = 0; i < hyperParams.Count(); i++)

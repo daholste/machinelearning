@@ -24,6 +24,20 @@ namespace Microsoft.ML.Runtime.PipelineInference
     {
         public static Random Random = new Random();
 
+        // Temporary hack
+        public static IHost MakeDummyIHost()
+        {
+            IHostEnvironment env = new MLContext();
+            return env.Register("host");
+        }
+
+        public static IChannel MakeDummyChannel()
+        {
+            IHostEnvironment env = new MLContext();
+            var host = env.Register("host");
+            return host.Start("channel");
+        }
+
         /// <summary>
         /// Using the dependencyMapping and included transforms, computes which subset of columns in dataSample
         /// will be present in the final transformed dataset when only the transforms present are applied.
@@ -95,7 +109,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// Note: May return empty set if Features column already present and is only relevant numeric column.
         /// (In other words, if there would be nothing for that concatenate transform to do.)
         /// </summary>
-        private static TransformInference.SuggestedTransform[] GetFinalFeatureConcat(IHostEnvironment env,
+        private static TransformInference.SuggestedTransform[] GetFinalFeatureConcat(MLContext env,
             IDataView dataSample, int[] excludedColumnIndices, int level, int atomicIdOffset, RoleMappedData dataRoles)
         {
             var finalArgs = new TransformInference.Arguments
@@ -119,7 +133,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// <summary>
         /// Exposed version of the method.
         /// </summary>
-        public static TransformInference.SuggestedTransform[] GetFinalFeatureConcat(IHostEnvironment env, IDataView data,
+        public static TransformInference.SuggestedTransform[] GetFinalFeatureConcat(MLContext env, IDataView data,
             AutoInference.DependencyMap dependencyMapping, TransformInference.SuggestedTransform[] selectedTransforms,
             TransformInference.SuggestedTransform[] allTransforms, RoleMappedData dataRoles)
         {

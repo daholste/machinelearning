@@ -18,19 +18,19 @@ namespace Microsoft.ML.Runtime.PipelineInference
         {
             //Contracts.CheckValue(data, nameof(data));
             // REVIEW: This should take an env as a parameter, not create one.
-            var env = new ConsoleEnvironment(0);
+            var env = new MLContext();
             var take = SkipTakeFilter.Create(env, new SkipTakeFilter.TakeArguments { Count = count }, data);
             return CacheCore(take, env);
         }
 
-        private static IDataView CacheCore(IDataView data, IHostEnvironment env)
+        private static IDataView CacheCore(IDataView data, MLContext env)
         {
             //Contracts.AssertValue(data, "data");
             //Contracts.AssertValue(env, "env");
             return new CacheDataView(env, data, Enumerable.Range(0, data.Schema.ColumnCount).ToArray());
         }
 
-        public static ColumnGroupingInference.GroupingColumn[] InferColumnPurposes(IChannel ch, IHostEnvironment env, TextFileSample sample, TextFileContents.ColumnSplitResult splitResult,
+        public static ColumnGroupingInference.GroupingColumn[] InferColumnPurposes(MLContext env, TextFileSample sample, TextFileContents.ColumnSplitResult splitResult,
             out bool hasHeader, string colLabelName = null)
         {
            // ch.Info("Detecting column types");

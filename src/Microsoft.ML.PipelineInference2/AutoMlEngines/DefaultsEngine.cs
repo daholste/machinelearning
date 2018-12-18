@@ -23,13 +23,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
         [TlcModule.Component(Name = "Defaults", FriendlyName = "Defaults Engine",
             Desc = "AutoML engine that returns learners with default settings.")]
-        public sealed class Arguments : ISupportIPipelineOptimizerFactory
+        public sealed class Arguments
         {
-            public IPipelineOptimizer CreateComponent(IHostEnvironment env) => new DefaultsEngine(env, this);
+            public IPipelineOptimizer CreateComponent(MLContext env) => new DefaultsEngine(env, this);
         }
 
-        public DefaultsEngine(IHostEnvironment env, Arguments args)
-            : base(env, env.Register("DefaultsEngine(AutoML)"))
+        public DefaultsEngine(MLContext env, Arguments args) : base(env)
         {
             _currentLearnerIndex = 0;
         }

@@ -27,7 +27,7 @@ namespace Microsoft.ML.PipelineInference2
     public static class ComponentFactoryUtils
     {
         /// <summary>
-        /// Creates a component factory with no extra parameters (other than an <see cref="IHostEnvironment"/>)
+        /// Creates a component factory with no extra parameters (other than an <see cref="MLContext"/>)
         /// that simply wraps a delegate which creates the component.
         /// </summary>
         public static IComponentFactory<TComponent> CreateFromFunction<TComponent>(Func<IHostEnvironment, TComponent> factory)

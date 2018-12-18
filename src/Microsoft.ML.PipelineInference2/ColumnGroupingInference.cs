@@ -63,7 +63,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// <param name="types">The (detected) column types.</param>
         /// <param name="purposes">The (detected) column purposes. Must be parallel to <paramref name="types"/>.</param>
         /// <returns>The struct containing an array of grouped columns specifications.</returns>
-        public static InferenceResult InferGroupingAndNames(IHostEnvironment env, bool hasHeader, ColumnTypeInference.Column[] types, PurposeInference.Column[] purposes)
+        public static InferenceResult InferGroupingAndNames(MLContext env, bool hasHeader, ColumnTypeInference.Column[] types, PurposeInference.Column[] purposes)
         {
             //Contracts.CheckValue(env, nameof(env));
             //Contracts.CheckNonEmpty(types, nameof(types));
@@ -71,33 +71,33 @@ namespace Microsoft.ML.Runtime.PipelineInference
             //Contracts.Check(types.Length == purposes.Length);
 
             var result = new List<GroupingColumn>();
-            using (var ch = env.Register("InferGrouping").Start("InferGrouping"))
+            //using (var ch = env.Register("InferGrouping").Start("InferGrouping"))
+            //{
+            var tuples = types.Zip(purposes, Tuple.Create).ToList();
+            var grouped =
+                from t in tuples
+                group t by
+                    new
+                    {
+                        t.Item1.ItemType,
+                        t.Item2.Purpose,
+                        purposeGroupId = GetPurposeGroupId(t.Item1.ColumnIndex, t.Item2.Purpose)
+                    }
+                    into g
+                    select g;
+
+            foreach (var g in grouped)
             {
-                var tuples = types.Zip(purposes, Tuple.Create).ToList();
-                var grouped =
-                    from t in tuples
-                    group t by
-                        new
-                        {
-                            t.Item1.ItemType,
-                            t.Item2.Purpose,
-                            purposeGroupId = GetPurposeGroupId(t.Item1.ColumnIndex, t.Item2.Purpose)
-                        }
-                        into g
-                        select g;
+                string name = (hasHeader && g.Count() == 1)
+                    ? g.First().Item1.SuggestedName
+                    : GetName(g.Key.ItemType.RawKind(), g.Key.Purpose, result);
 
-                foreach (var g in grouped)
-                {
-                    string name = (hasHeader && g.Count() == 1)
-                        ? g.First().Item1.SuggestedName
-                        : GetName(g.Key.ItemType.RawKind(), g.Key.Purpose, result);
-
-                    string range = GetRange(g.Select(t => t.Item1.ColumnIndex).ToArray());
-                    if (g.Count() > 1)
-                        ch.Info("Grouped data from columns '{0}' into vector column '{1}'.", range, name);
-                    result.Add(new GroupingColumn(name, g.Key.ItemType.RawKind(), g.Key.Purpose, range));
-                }
+                string range = GetRange(g.Select(t => t.Item1.ColumnIndex).ToArray());
+                //if (g.Count() > 1)
+                    //ch.Info("Grouped data from columns '{0}' into vector column '{1}'.", range, name);
+                result.Add(new GroupingColumn(name, g.Key.ItemType.RawKind(), g.Key.Purpose, range));
             }
+            //}
 
             return new InferenceResult(result.ToArray());
         }

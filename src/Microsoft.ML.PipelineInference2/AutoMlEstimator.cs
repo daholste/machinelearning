@@ -29,12 +29,12 @@ namespace Microsoft.ML.AutoMLPublicAPI2
 
     public class AutoMlBinaryClassificationEstimator : IEstimator<ITransformer>
     {
-        private readonly IHostEnvironment _env;
+        private readonly MLContext _env;
         private readonly int _maxIterations;
 
         public IDataView ValidationData { get; set; }
 
-        public AutoMlBinaryClassificationEstimator(IHostEnvironment env, int maxIterations = 10, IDataView validationData = null)
+        public AutoMlBinaryClassificationEstimator(MLContext env, int maxIterations = 10, IDataView validationData = null)
         {
             _env = env;
             _maxIterations = maxIterations;
@@ -53,11 +53,7 @@ namespace Microsoft.ML.AutoMLPublicAPI2
             var bestPipelines = amls.InferPipelines(1, 3, 100);
             var bestPipeline = bestPipelines.First();
 
-            // hack: start dummy host & channel
-            var host = _env.Register("hi");
-            var ch = host.Start("hi");
-
-            var transformer = bestPipeline.TrainTransformer(trainData, ch);
+            var transformer = bestPipeline.TrainTransformer(trainData);
             return transformer;
         }
 

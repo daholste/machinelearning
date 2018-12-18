@@ -91,7 +91,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             LearnerName = learnerName;
         }
 
-        public ITrainerEstimator<ISingleFeaturePredictionTransformer<IPredictor>, IPredictor> BuildTrainer(IHostEnvironment env)
+        public ITrainerEstimator<ISingleFeaturePredictionTransformer<IPredictor>, IPredictor> BuildTrainer(MLContext env)
         {
             ITrainerEstimator<ISingleFeaturePredictionTransformer<IPredictor>, IPredictor> trainer;
 

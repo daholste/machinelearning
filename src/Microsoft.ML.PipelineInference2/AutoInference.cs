@@ -47,10 +47,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// </summary>
         public class DependencyMap : Dictionary<int, LevelDependencyMap> { }
 
-        [TlcModule.ComponentKind("AutoMlStateBase")]
-        public interface ISupportAutoMlStateFactory : IComponentFactory<AutoMlMlState>
-        { }
-
         /// <summary>
         /// Class that holds state for an autoML search-in-progress. Should be able to resume search, given this object.
         /// </summary>
@@ -58,9 +54,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         {
             private readonly SortedList<double, PipelinePattern> _sortedSampledElements;
             private readonly List<PipelinePattern> _history;
-            private readonly IHostEnvironment _env;
-            private readonly IHost _host;
-            private readonly IChannel _ch;
+            private readonly MLContext _env;
             private IDataView _trainData;
             private IDataView _testData;
             private IDataView _transformedData;
@@ -75,37 +69,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             public SupportedMetric Metric { get; }
             public MacroUtils.TrainerKinds TrainerKind { get; }
 
-            [TlcModule.Component(Name = "AutoMlState", FriendlyName = "AutoML State", Alias = "automlst",
-                Desc = "State of an AutoML search and search space.")]
-            public sealed class Arguments : ISupportAutoMlStateFactory
-            {
-                //[Argument(ArgumentType.Required, HelpText = "Supported metric for evaluator.", ShortName = "metric")]
-                public PipelineSweeperSupportedMetrics.Metrics Metric;
-
-                //[Argument(ArgumentType.Required, HelpText = "AutoML engine (pipeline optimizer) that generates next candidates.", ShortName = "engine")]
-                public ISupportIPipelineOptimizerFactory Engine;
-
-                //[Argument(ArgumentType.Required, HelpText = "Kind of trainer for task, such as binary classification trainer, multiclass trainer, etc.", ShortName = "tk")]
-                public MacroUtils.TrainerKinds TrainerKind;
-
-                //[Argument(ArgumentType.Required, HelpText = "Arguments for creating terminator, which determines when to stop search.", ShortName = "term")]
-                public ISupportITerminatorFactory TerminatorArgs;
-
-                //[Argument(ArgumentType.AtMostOnce, HelpText = "Learner set to sweep over (if available).", ShortName = "learners")]
-                public string[] RequestedLearners;
-
-                public AutoMlMlState CreateComponent(IHostEnvironment env) => new AutoMlMlState(env, this);
-            }
-
-            public AutoMlMlState(IHostEnvironment env, Arguments args)
-                : this(env,
-                      PipelineSweeperSupportedMetrics.GetSupportedMetric(args.Metric),
-                      args.Engine.CreateComponent(env),
-                      args.TerminatorArgs.CreateComponent(env), args.TrainerKind, requestedLearners: args.RequestedLearners)
-            {
-            }
-
-            public AutoMlMlState(IHostEnvironment env, SupportedMetric metric, IPipelineOptimizer autoMlEngine,
+            public AutoMlMlState(MLContext env, SupportedMetric metric, IPipelineOptimizer autoMlEngine,
                 ITerminator terminator, MacroUtils.TrainerKinds trainerKind, IDataView trainData = null, IDataView testData = null,
                 string[] requestedLearners = null)
             {
@@ -115,8 +79,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         new SortedList<double, PipelinePattern>();
                 _history = new List<PipelinePattern>();
                 _env = env;
-                _host = _env.Register("AutoMlState");
-                _ch = _host.Start("AutoMlStateChannel");
+                //_host = _env.Register("AutoMlState");
+                //_ch = _host.Start("AutoMlStateChannel");
                 _trainData = trainData;
                 _testData = testData;
                 _terminator = terminator;
@@ -131,7 +95,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             {
                 var overallExecutionTime = Stopwatch.StartNew();
                 var stopwatch = new Stopwatch();
-                var probabilityUtils = new Sweeper.Algorithms.SweeperProbabilityUtils(_host);
+                var probabilityUtils = new Sweeper.Algorithms.SweeperProbabilityUtils(AutoMlUtils.MakeDummyIHost());
 
                 while (!_terminator.ShouldTerminate(_history))
                 {
@@ -180,7 +144,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 // Run pipeline, and time how long it takes
                 stopwatch.Restart();
                 candidate.RunTrainTestExperiment(_trainData,
-                    _testData, Metric, TrainerKind, _env, _ch, out var testMetricVal);
+                    _testData, Metric, TrainerKind, _env, out var testMetricVal);
                 stopwatch.Stop();
 
                 // Handle key collisions on sorted list
@@ -242,20 +206,22 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 //_env.AssertValue(_trainData, nameof(_trainData), "Must set training data prior to calling method.");
                 //_env.AssertValue(_testData, nameof(_testData), "Must set test data prior to calling method.");
 
-                var h = _env.Register("InferPipelines");
-                using (var ch = h.Start("InferPipelines"))
-                {
-                    // Check if search space has not been initialized. If not,
-                    // run method to define it usign inference.
-                    if (!IsSearchSpaceDefined())
-                        InferSearchSpace(numTransformLevels);
+                //var h = _env.Register("InferPipelines");
+                //using (var ch = h.Start("InferPipelines"))
+                //{
 
-                    // Learn for a given number of iterations
-                    MainLearningLoop(batchSize, numOfTrainingRows);
+                // Check if search space has not been initialized. If not,
+                // run method to define it usign inference.
+                if (!IsSearchSpaceDefined())
+                    InferSearchSpace(numTransformLevels);
 
-                    // Return best pipeline seen
-                    return _sortedSampledElements.Values;
-                }
+                // Learn for a given number of iterations
+                MainLearningLoop(batchSize, numOfTrainingRows);
+
+                // Return best pipeline seen
+                return _sortedSampledElements.Values;
+
+                //}
             }
 
             /// <summary>
@@ -266,67 +232,67 @@ namespace Microsoft.ML.Runtime.PipelineInference
             {
                 //_env.AssertValue(_trainData, nameof(_trainData), "Must set training data prior to inferring search space.");
 
-                var h = _env.Register("ComputeSearchSpace");
+                //var h = _env.Register("ComputeSearchSpace");
 
-                using (var ch = h.Start("ComputeSearchSpace"))
+                //using (var ch = h.Start("ComputeSearchSpace"))
+                //{
+                //_env.Check(IsValidLearnerSet(learners), "Unsupported learner encountered, cannot update search space.");
+
+                var dataSample = _trainData;
+                var inferenceArgs = new TransformInference.Arguments
                 {
-                    //_env.Check(IsValidLearnerSet(learners), "Unsupported learner encountered, cannot update search space.");
+                    EstimatedSampleFraction = 1.0,
+                    ExcludeFeaturesConcatTransforms = true
+                };
 
-                    var dataSample = _trainData;
-                    var inferenceArgs = new TransformInference.Arguments
-                    {
-                        EstimatedSampleFraction = 1.0,
-                        ExcludeFeaturesConcatTransforms = true
-                    };
+                // Initialize structure for mapping columns back to specific transforms
+                var dependencyMapping = new DependencyMap
+                {
+                    {0, AutoMlUtils.ComputeColumnResponsibilities(dataSample, new TransformInference.SuggestedTransform[0])}
+                };
 
-                    // Initialize structure for mapping columns back to specific transforms
-                    var dependencyMapping = new DependencyMap
-                    {
-                        {0, AutoMlUtils.ComputeColumnResponsibilities(dataSample, new TransformInference.SuggestedTransform[0])}
-                    };
+                // Get suggested transforms for all levels. Defines another part of search space.
+                var transformsList = new List<TransformInference.SuggestedTransform>();
+                for (int i = 0; i < numTransformLevels; i++)
+                {
+                    // Update level for transforms
+                    inferenceArgs.Level = i + 1;
 
-                    // Get suggested transforms for all levels. Defines another part of search space.
-                    var transformsList = new List<TransformInference.SuggestedTransform>();
-                    for (int i = 0; i < numTransformLevels; i++)
-                    {
-                        // Update level for transforms
-                        inferenceArgs.Level = i + 1;
+                    // Infer transforms using experts
+                    var levelTransforms = transformInferenceFunction(dataSample, inferenceArgs);
 
-                        // Infer transforms using experts
-                        var levelTransforms = transformInferenceFunction(dataSample, inferenceArgs);
+                    // If no more transforms to apply, dataSample won't change. So end loop.
+                    if (levelTransforms.Length == 0)
+                        break;
 
-                        // If no more transforms to apply, dataSample won't change. So end loop.
-                        if (levelTransforms.Length == 0)
-                            break;
+                    // Make sure we don't overflow our bitmask
+                    if (levelTransforms.Max(t => t.AtomicGroupId) > 64)
+                        break;
 
-                        // Make sure we don't overflow our bitmask
-                        if (levelTransforms.Max(t => t.AtomicGroupId) > 64)
-                            break;
+                    // Level-up atomic group id offset.
+                    inferenceArgs.AtomicIdOffset = levelTransforms.Max(t => t.AtomicGroupId) + 1;
 
-                        // Level-up atomic group id offset.
-                        inferenceArgs.AtomicIdOffset = levelTransforms.Max(t => t.AtomicGroupId) + 1;
+                    // Apply transforms to dataview for this level.
+                    dataSample = AutoMlUtils.ApplyTransformSet(dataSample, levelTransforms);
 
-                        // Apply transforms to dataview for this level.
-                        dataSample = AutoMlUtils.ApplyTransformSet(dataSample, levelTransforms);
-
-                        // Keep list of which transforms can be responsible for which output columns
-                        dependencyMapping.Add(inferenceArgs.Level,
-                            AutoMlUtils.ComputeColumnResponsibilities(dataSample, levelTransforms));
-                        transformsList.AddRange(levelTransforms);
-                    }
-
-                    var transforms = transformsList.ToArray();
-
-                    // Save state, for resuming learning
-                    _availableTransforms = transforms;
-                    _availableLearners = learners;
-                    _dependencyMapping = dependencyMapping;
-                    _transformedData = dataSample;
-
-                    // Update autoML engine to know what the search space looks like
-                    AutoMlEngine.SetSpace(_availableTransforms, _availableLearners,
-                        _trainData, _transformedData, _dependencyMapping, Metric.IsMaximizing);
+                    // Keep list of which transforms can be responsible for which output columns
+                    dependencyMapping.Add(inferenceArgs.Level,
+                        AutoMlUtils.ComputeColumnResponsibilities(dataSample, levelTransforms));
+                    transformsList.AddRange(levelTransforms);
                 }
+
+                var transforms = transformsList.ToArray();
+
+                // Save state, for resuming learning
+                _availableTransforms = transforms;
+                _availableLearners = learners;
+                _dependencyMapping = dependencyMapping;
+                _transformedData = dataSample;
+
+                // Update autoML engine to know what the search space looks like
+                AutoMlEngine.SetSpace(_availableTransforms, _availableLearners,
+                    _trainData, _transformedData, _dependencyMapping, Metric.IsMaximizing);
+                //}
             }
 
             public bool IsSearchSpaceDefined() => _availableLearners != null && _availableTransforms != null;

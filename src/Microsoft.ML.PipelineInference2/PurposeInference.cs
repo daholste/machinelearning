@@ -61,7 +61,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// </summary>
         private interface IPurposeInferenceExpert
         {
-            void Apply(IChannel ch, IntermediateColumn[] columns);
+            void Apply(IntermediateColumn[] columns);
         }
 
         private class IntermediateColumn
@@ -131,7 +131,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         {
             public sealed class HeaderComprehension : IPurposeInferenceExpert
             {
-                public void Apply(IChannel ch, IntermediateColumn[] columns)
+                public void Apply(IntermediateColumn[] columns)
                 {
                     foreach (var column in columns)
                     {
@@ -155,14 +155,14 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             column.SuggestedPurpose = ColumnPurpose.Ignore;
                         else
                             continue;
-                        ch.Info("Column '{0}' is {1} based on header.", column.ColumnName, column.SuggestedPurpose);
+                        //ch.Info("Column '{0}' is {1} based on header.", column.ColumnName, column.SuggestedPurpose);
                     }
                 }
             }
 
             public sealed class TextClassification : IPurposeInferenceExpert
             {
-                public void Apply(IChannel ch, IntermediateColumn[] columns)
+                public void Apply(IntermediateColumn[] columns)
                 {
                     string[] commonImageExtensions = { ".bmp", ".dib", ".rle", ".jpg", ".jpeg", ".jpe", ".jfif", ".gif", ".tif", ".tiff", ".png" };
                     foreach (var column in columns)
@@ -209,14 +209,14 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         else
                             column.SuggestedPurpose = ColumnPurpose.ImagePath;
 
-                        ch.Info("Text column '{0}' purpose detected as '{1}' based on values.", column.ColumnName, column.SuggestedPurpose);
+                        //ch.Info("Text column '{0}' purpose detected as '{1}' based on values.", column.ColumnName, column.SuggestedPurpose);
                     }
                 }
             }
 
             public sealed class FirstNumericOrBooleanIsLabel : IPurposeInferenceExpert
             {
-                public void Apply(IChannel ch, IntermediateColumn[] columns)
+                public void Apply(IntermediateColumn[] columns)
                 {
                     if (columns.Any(x => x.IsPurposeSuggested && x.SuggestedPurpose == ColumnPurpose.Label))
                         return;
@@ -227,14 +227,14 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     if (firstNumeric != null)
                     {
                         //firstNumeric.SuggestedPurpose = ColumnPurpose.Label;
-                        ch.Info("Column '{0}' auto-designated as label.", firstNumeric.ColumnName);
+                        //ch.Info("Column '{0}' auto-designated as label.", firstNumeric.ColumnName);
                     }
                 }
             }
 
             public sealed class NumericAreFeatures : IPurposeInferenceExpert
             {
-                public void Apply(IChannel ch, IntermediateColumn[] columns)
+                public void Apply(IntermediateColumn[] columns)
                 {
                     foreach (var column in columns)
                     {
@@ -248,7 +248,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public sealed class BooleanProcessing : IPurposeInferenceExpert
             {
-                public void Apply(IChannel ch, IntermediateColumn[] columns)
+                public void Apply(IntermediateColumn[] columns)
                 {
                     foreach (var column in columns)
                     {
@@ -262,7 +262,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public sealed class TextArraysAreText : IPurposeInferenceExpert
             {
-                public void Apply(IChannel ch, IntermediateColumn[] columns)
+                public void Apply(IntermediateColumn[] columns)
                 {
                     foreach (var column in columns)
                     {
@@ -276,7 +276,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             public sealed class IgnoreEverythingElse : IPurposeInferenceExpert
             {
-                public void Apply(IChannel ch, IntermediateColumn[] columns)
+                public void Apply(IntermediateColumn[] columns)
                 {
                     foreach (var column in columns)
                     {
@@ -318,58 +318,58 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// <param name="dataRoles">(Optional) User defined Role mappings for data.</param>
         /// <param name="colLabelName">(Optional) User defined Role mappings for data.</param>
         /// <returns>The result includes the array of auto-detected column purposes.</returns>
-        public static InferenceResult InferPurposes(IHostEnvironment env, IDataView data, IEnumerable<int> columnIndices, Arguments args,
+        public static InferenceResult InferPurposes(MLContext env, IDataView data, IEnumerable<int> columnIndices, Arguments args,
             RoleMappedData dataRoles = null, string colLabelName = null)
         {
             //Contracts.CheckValue(env, nameof(env));
-            var host = env.Register("InferPurposes");
+            //var host = env.Register("InferPurposes");
             //host.CheckValue(data, nameof(data));
             //host.CheckValue(columnIndices, nameof(columnIndices));
 
             InferenceResult result;
-            using (var ch = host.Start("InferPurposes"))
+            //using (var ch = host.Start("InferPurposes"))
+            //{
+            var takenData = data.Take(args.MaxRowsToRead);
+            var cols = columnIndices.Select(x => new IntermediateColumn(takenData, x)).ToList();
+            data = takenData;
+
+            if (dataRoles != null)
             {
-                var takenData = data.Take(args.MaxRowsToRead);
-                var cols = columnIndices.Select(x => new IntermediateColumn(takenData, x)).ToList();
-                data = takenData;
-
-                if (dataRoles != null)
+                var items = dataRoles.Schema.GetColumnRoles();
+                foreach (var item in items)
                 {
-                    var items = dataRoles.Schema.GetColumnRoles();
-                    foreach (var item in items)
-                    {
-                        Enum.TryParse(item.Key.Value, out ColumnPurpose purpose);
-                        var col = cols.Find(x => x.ColumnName == item.Value.Name);
-                        col.SuggestedPurpose = purpose;
-                    }
+                    Enum.TryParse(item.Key.Value, out ColumnPurpose purpose);
+                    var col = cols.Find(x => x.ColumnName == item.Value.Name);
+                    col.SuggestedPurpose = purpose;
                 }
-
-                foreach (var expert in GetExperts())
-                {
-                    using (var expertChannel = host.Start(expert.GetType().ToString()))
-                    {
-                        expert.Apply(expertChannel, cols.ToArray());
-                    }
-                }
-
-                if (colLabelName == null)
-                {
-                    colLabelName = "Label";
-                }
-                foreach (var col in cols)
-                {
-                    if (col.ColumnName == colLabelName)
-                    {
-                        col.SuggestedPurpose = ColumnPurpose.Label;
-                    }
-                }
-
-                //ch.Check(cols.All(x => x.IsPurposeSuggested), "Purpose inference must be conclusive");
-
-                result = new InferenceResult(cols.Select(x => x.GetColumn()).ToArray());
-
-                ch.Info("Automatic purpose inference complete");
             }
+
+            foreach (var expert in GetExperts())
+            {
+                //using (var expertChannel = host.Start(expert.GetType().ToString()))
+                //{
+                expert.Apply(cols.ToArray());
+                //}
+            }
+
+            if (colLabelName == null)
+            {
+                colLabelName = "Label";
+            }
+            foreach (var col in cols)
+            {
+                if (col.ColumnName == colLabelName)
+                {
+                    col.SuggestedPurpose = ColumnPurpose.Label;
+                }
+            }
+
+            //ch.Check(cols.All(x => x.IsPurposeSuggested), "Purpose inference must be conclusive");
+
+            result = new InferenceResult(cols.Select(x => x.GetColumn()).ToArray());
+
+                //ch.Info("Automatic purpose inference complete");
+            //}
             return result;
         }
     }

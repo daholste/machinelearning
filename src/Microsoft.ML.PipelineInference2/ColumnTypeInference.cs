@@ -219,7 +219,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// <summary>
         /// Auto-detect column types of the file.
         /// </summary>
-        public static InferenceResult InferTextFileColumnTypes(IHostEnvironment env, IMultiStreamSource fileSource, Arguments args)
+        public static InferenceResult InferTextFileColumnTypes(MLContext env, IMultiStreamSource fileSource, Arguments args)
         {
             //Contracts.CheckValue(env, nameof(env));
             //env.CheckValue(fileSource, nameof(fileSource));
@@ -227,13 +227,13 @@ namespace Microsoft.ML.Runtime.PipelineInference
             //env.CheckNonEmpty(args.Separator, nameof(args.Separator));
             //env.Check(args.MaxRowsToRead > 0);
 
-            using (var ch = env.Register("InferTextFileColumnTypes").Start("TypeInference"))
-            {
-                return InferTextFileColumnTypesCore(env, fileSource, args, ch);
-            }
+            //using (var ch = env.Register("InferTextFileColumnTypes").Start("TypeInference"))
+            //{
+            return InferTextFileColumnTypesCore(env, fileSource, args);
+            //}
         }
 
-        private static InferenceResult InferTextFileColumnTypesCore(IHostEnvironment env, IMultiStreamSource fileSource, Arguments args, IChannel ch)
+        private static InferenceResult InferTextFileColumnTypesCore(MLContext env, IMultiStreamSource fileSource, Arguments args)
         {
             //Contracts.AssertValue(ch);
             //ch.AssertValue(env);
@@ -242,13 +242,13 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             if (args.ColumnCount == 0)
             {
-                ch.Error("Too many empty columns for automatic inference.");
+                //ch.Error("Too many empty columns for automatic inference.");
                 return InferenceResult.Fail();
             }
 
             if (args.ColumnCount >= SmartColumnsLim)
             {
-                ch.Error("Too many columns for automatic inference.");
+                //ch.Error("Too many columns for automatic inference.");
                 return InferenceResult.Fail();
             }
 
@@ -307,7 +307,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             if (data.Count < 2)
             {
-                ch.Error("Too few rows ({0}) for automatic inference.", data.Count);
+                //ch.Error("Too few rows ({0}) for automatic inference.", data.Count);
                 return InferenceResult.Fail();
             }
 
@@ -366,9 +366,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
             var numerics = outCols.Count(x => x.ItemType.IsNumber());
 
-            ch.Info("Detected {0} numeric and {1} text columns.", numerics, outCols.Length - numerics);
-            if (hasHeader)
-                ch.Info("Generated column names from the file header.");
+            //ch.Info("Detected {0} numeric and {1} text columns.", numerics, outCols.Length - numerics);
+           // if (hasHeader)
+                //ch.Info("Generated column names from the file header.");
 
             return InferenceResult.Success(outCols, hasHeader, cols.Select(col => col.RawData).ToArray());
         }
