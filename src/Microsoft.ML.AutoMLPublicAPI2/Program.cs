@@ -17,6 +17,8 @@ namespace Microsoft.ML.AutoMLPublicAPI2
 
             var mlContext = new MLContext();
 
+            var textLoaderArgs = RecipeInference.MyAutoMlInferTextLoaderArguments(mlContext, trainDataPath, "Label");
+
             // load data
             var textLoader = new TextLoader(mlContext,
                 new TextLoader.Arguments()
