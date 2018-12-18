@@ -133,7 +133,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 long fileSizeRemaining = fileSize - firstChunk.Length - ((long)chunkSize) * chunkCount;
                 //Contracts.Assert(fileSizeRemaining > 0);
 
-                var rnd = env.Register("TextFileSample").Rand;
+                var rnd = AutoMlUtils.Random;
                 var chunkStartIndices = Enumerable.Range(0, chunkCount)
                     .Select(x => rnd.NextDouble() * fileSizeRemaining)
                     .OrderBy(x => x)

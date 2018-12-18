@@ -21,6 +21,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
 {
     public static class AutoMlUtils
     {
+        public static Random Random = new Random();
+
         /// <summary>
         /// Using the dependencyMapping and included transforms, computes which subset of columns in dataSample
         /// will be present in the final transformed dataset when only the transforms present are applied.
