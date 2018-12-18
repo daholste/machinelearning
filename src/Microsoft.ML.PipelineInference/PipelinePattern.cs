@@ -231,15 +231,22 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// <summary>
         /// Runs a train-test experiment on the current pipeline
         /// </summary>
-        public void RunTrainTestExperiment(IDataView trainData, IDataView testData,
-            SupportedMetric metric, MacroUtils.TrainerKinds trainerKind, IHostEnvironment env,
-            IChannel ch, out double testMetricValue)
+        public Data.RegressionEvaluator.Result RunTrainTestExperiment(
+            IDataView trainData,
+            IDataView testData,
+            SupportedMetric metric,
+            MacroUtils.TrainerKinds trainerKind,
+            IHostEnvironment env,
+            IChannel ch)
         {
             var pipelineTransformer = TrainTransformer(trainData, ch);
             var scoredTestData = pipelineTransformer.Transform(testData);
+
             var ctx = new RegressionContext(env);
+
             var metrics = ctx.Evaluate(scoredTestData);
-            testMetricValue = metrics.RSquared;
+
+            return metrics;
         }
 
         public ITransformer TrainTransformer(IDataView trainData, IChannel ch)

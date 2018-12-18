@@ -140,6 +140,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
             public SupportedMetric Metric { get; }
             public MacroUtils.TrainerKinds TrainerKind { get; }
 
+            public IterationMonitor IterationMonitor;
+
             [TlcModule.Component(Name = "AutoMlState", FriendlyName = "AutoML State", Alias = "automlst",
                 Desc = "State of an AutoML search and search space.")]
             public sealed class Arguments : ISupportAutoMlStateFactory
@@ -190,6 +192,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 BatchCandidates = new PipelinePattern[] { };
                 Metric = metric;
                 TrainerKind = trainerKind;
+                IterationMonitor = new IterationMonitor();
             }
 
             public void SetTrainTestData(IDataView trainData, IDataView testData)
@@ -248,20 +251,39 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 if (randomizedNumberOfRows > numOfTrainingRows)
                     randomizedNumberOfRows = numOfTrainingRows - (randomizedNumberOfRows - numOfTrainingRows);
 
-                // Run pipeline, and time how long it takes
-                stopwatch.Restart();
-                candidate.RunTrainTestExperiment(_trainData,
-                    _testData, Metric, TrainerKind, _env, _ch, out var testMetricVal);
-                stopwatch.Stop();
+                IterationMonitor.IterationStarted(new Iteration { Pipeline = candidate });
 
-                // Handle key collisions on sorted list
-                while (_sortedSampledElements.ContainsKey(testMetricVal))
-                    testMetricVal += 1e-10;
+                try
+                {
+                    // Run pipeline, and time how long it takes
+                    stopwatch.Restart();
+                    var metric = candidate.RunTrainTestExperiment(_trainData, _testData, Metric, TrainerKind, _env, _ch);
+                    stopwatch.Stop();
 
-                // Save performance score
-                candidate.PerformanceSummary = new PipelineSweeperRunSummary(testMetricVal, randomizedNumberOfRows, stopwatch.ElapsedMilliseconds, 0);
-                _sortedSampledElements.Add(candidate.PerformanceSummary.MetricValue, candidate);
-                _history.Add(candidate);
+                    var metricRSquared = metric.RSquared;
+                    // Handle key collisions on sorted list
+                    while (_sortedSampledElements.ContainsKey(metricRSquared))
+                        metricRSquared += 1e-10;
+
+                    // Save performance score
+                    candidate.PerformanceSummary = new PipelineSweeperRunSummary(metricRSquared, randomizedNumberOfRows, stopwatch.ElapsedMilliseconds, 0);
+                    _sortedSampledElements.Add(candidate.PerformanceSummary.MetricValue, candidate);
+                    _history.Add(candidate);
+
+                    IterationMonitor.IterationFinished(
+                        new IterationResult
+                        {
+                            Pipeline = candidate,
+                            Score = metric,
+                            TimeElapsedInMilliseconds = stopwatch.ElapsedMilliseconds
+                        });
+                }
+                catch (Exception e)
+                {
+                    IterationMonitor.IterationFailed(e);
+
+                    throw e;
+                }
 
                 var transformsSb = new StringBuilder();
                 foreach (var transform in candidate.Transforms)

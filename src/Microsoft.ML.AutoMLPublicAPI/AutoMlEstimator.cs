@@ -2,10 +2,7 @@
 using Microsoft.ML.Runtime.Data;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using static Microsoft.ML.Core.Data.SchemaShape;
 using static Microsoft.ML.Core.Data.SchemaShape.Column;
-using Microsoft.ML.Runtime.Training;
 using Microsoft.ML.Runtime;
 using static Microsoft.ML.Runtime.PipelineInference.AutoInference;
 using static Microsoft.ML.RegressionContext;
@@ -31,6 +28,8 @@ namespace Microsoft.ML.AutoMLPublicAPI
     {
         private readonly IHostEnvironment _env;
         private readonly int _maxIterations;
+        private IterationResultRecorder _iterationResultRecorder;
+        private List<ITrainingIterationNotifications> _iterationOvservers;
 
         public IDataView ValidationData { get; set; }
 
@@ -39,6 +38,7 @@ namespace Microsoft.ML.AutoMLPublicAPI
             _env = env;
             _maxIterations = maxIterations;
             ValidationData = validationData;
+            _iterationOvservers = new List<ITrainingIterationNotifications>();
         }
 
         public ITransformer Fit(IDataView trainData)
@@ -50,6 +50,12 @@ namespace Microsoft.ML.AutoMLPublicAPI
                 PipelineSweeperSupportedMetrics.GetSupportedMetric(PipelineSweeperSupportedMetrics.Metrics.RSquared),
                 rocketEngine, terminator, MacroUtils.TrainerKinds.SignatureRegressorTrainer,
                    trainData, ValidationData);
+
+            _iterationResultRecorder = new IterationResultRecorder();
+            amls.IterationMonitor.Subscribe(_iterationResultRecorder);
+            foreach (var nextObserver in _iterationOvservers)
+                amls.IterationMonitor.Subscribe(nextObserver);
+
             var bestPipelines = amls.InferPipelines(1, 1, 100);
             var bestPipeline = bestPipelines.First();
 
@@ -58,6 +64,7 @@ namespace Microsoft.ML.AutoMLPublicAPI
             var ch = host.Start("hi");
 
             var transformer = bestPipeline.TrainTransformer(trainData, ch);
+
             return transformer;
         }
 
@@ -71,6 +78,11 @@ namespace Microsoft.ML.AutoMLPublicAPI
             cols.Add(scoreCol);
 
             return new SchemaShape(cols);
+        }
+
+        public void AddIterationObserver(ITrainingIterationNotifications observer)
+        {
+            _iterationOvservers.Add(observer);
         }
     }
 
