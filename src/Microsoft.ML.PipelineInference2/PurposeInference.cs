@@ -172,12 +172,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                         long sumLength = 0;
                         int sumSpaces = 0;
-                        var seen = new HashSet<uint>();
+                        var seen = new HashSet<string>();
                         int imagePathCount = 0;
                         foreach (var span in data)
                         {
                             sumLength += span.Length;
-                            seen.Add(Hashing.MurmurHash(0, span.Span));
+                            seen.Add(span.ToString());
                             string spanStr = span.ToString();
                             sumSpaces += spanStr.Count(x => x == ' ');
 
