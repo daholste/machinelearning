@@ -38,6 +38,14 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return host.Start("channel");
         }
 
+        public static void Assert(bool boolVal)
+        {
+            if(!boolVal)
+            {
+                throw new Exception("Assertion failed");
+            }
+        }
+
         /// <summary>
         /// Using the dependencyMapping and included transforms, computes which subset of columns in dataSample
         /// will be present in the final transformed dataset when only the transforms present are applied.
