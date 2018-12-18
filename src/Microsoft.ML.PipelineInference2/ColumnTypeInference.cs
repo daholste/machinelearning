@@ -169,7 +169,8 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         col.SuggestedType = NumberType.R4;
                         Single first;
 
-                        col.HasHeader = !DoubleParser.TryParse(col.RawData[0].Span, out first);
+                        var headerStr = col.RawData[0].ToString();
+                        col.HasHeader = !double.TryParse(headerStr, out var doubleVal);
                     }
                 }
             }
