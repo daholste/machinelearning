@@ -42,7 +42,7 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
         public sealed class Arguments
         {
             //[Argument(ArgumentType.Multiple | ArgumentType.Required, HelpText = "Swept parameters", ShortName = "p", SignatureType = typeof(SignatureSweeperParameter))]
-            public IComponentFactory<IValueGenerator>[] SweptParameters;
+            public IValueGenerator[] SweptParameters;
 
             //[Argument(ArgumentType.AtMostOnce, HelpText = "Seed for the random number generator for the first batch sweeper", ShortName = "seed")]
             public int RandomSeed;
@@ -81,14 +81,13 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
         private readonly ISweeper _randomSweeper;
         private readonly ISweeper _redundantSweeper;
         private readonly Arguments _args;
-        private readonly IHost _host;
 
         private readonly IValueGenerator[] _sweepParameters;
         private readonly SweeperProbabilityUtils _spu;
         private readonly SortedSet<Float[]> _alreadySeenConfigs;
         private readonly List<ParameterSet> _randomParamSets;
 
-        public KdoSweeper(IHostEnvironment env, Arguments args)
+        public KdoSweeper(Arguments args)
         {
             //Contracts.CheckValue(env, nameof(env));
             //_host = env.Register("Sweeper");
@@ -101,10 +100,10 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
 
             _args = args;
             //_host.CheckUserArg(Utils.Size(args.SweptParameters) > 0, nameof(args.SweptParameters), "KDO sweeper needs at least one parameter to sweep over");
-            _sweepParameters = args.SweptParameters.Select(p => p.CreateComponent(_host)).ToArray();
-            _randomSweeper = new UniformRandomSweeper(env, new SweeperBase.ArgumentsBase(), _sweepParameters);
-            _redundantSweeper = new UniformRandomSweeper(env, new SweeperBase.ArgumentsBase { Retries = 0 }, _sweepParameters);
-            _spu = new SweeperProbabilityUtils(_host);
+            _sweepParameters = args.SweptParameters.ToArray();
+            _randomSweeper = new UniformRandomSweeper(new SweeperBase.ArgumentsBase(), _sweepParameters);
+            _redundantSweeper = new UniformRandomSweeper(new SweeperBase.ArgumentsBase { Retries = 0 }, _sweepParameters);
+            _spu = new SweeperProbabilityUtils();
             _alreadySeenConfigs = new SortedSet<Float[]>(new FloatArrayComparer());
             _randomParamSets = new List<ParameterSet>();
         }
@@ -204,7 +203,7 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
         /// <returns>A mutated version of parent (i.e., point sampled near parent).</returns>
         private ParameterSet SampleChild(ParameterSet parent, double fitness, int n, IRunResult[] previousRuns, double rMean, double rVar, bool isMetricMaximizing)
         {
-            Float[] child = SweeperProbabilityUtils.ParameterSetAsFloatArray(_host, _sweepParameters, parent, false);
+            Float[] child = SweeperProbabilityUtils.ParameterSetAsFloatArray(_sweepParameters, parent, false);
             List<int> numericParamIndices = new List<int>();
             List<double> numericParamValues = new List<double>();
             int loopCount = 0;
@@ -279,7 +278,7 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
             } while (_alreadySeenConfigs.Contains(child));
 
             _alreadySeenConfigs.Add(child);
-            return SweeperProbabilityUtils.FloatArrayAsParameterSet(_host, _sweepParameters, child, false);
+            return SweeperProbabilityUtils.FloatArrayAsParameterSet(_sweepParameters, child, false);
         }
 
         private double Corral(double v)

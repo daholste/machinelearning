@@ -49,7 +49,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             Env = env;
             TransformsMaskValidity = new Dictionary<long, bool>();
             VisitedPipelines = new HashSet<string>();
-            ProbUtils = new SweeperProbabilityUtils(AutoMlUtils.MakeDummyIHost());
+            ProbUtils = new SweeperProbabilityUtils();
         }
 
         public abstract PipelinePattern[] GetNextCandidates(IEnumerable<PipelinePattern> history, int numberOfCandidates, RoleMappedData dataRoles);
@@ -132,7 +132,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             learner.PipelineNode.HyperSweeperParamSet = proposedParamSet;
 
             var generatorSet = hyperParams.Select(AutoMlUtils.ToIValueGenerator).ToArray();
-            var values = SweeperProbabilityUtils.ParameterSetAsFloatArray(AutoMlUtils.MakeDummyIHost(), generatorSet, proposedParamSet, false);
+            var values = SweeperProbabilityUtils.ParameterSetAsFloatArray(generatorSet, proposedParamSet, false);
 
             // Update hyperparameters.
             for (int i = 0; i < hyperParams.Count(); i++)

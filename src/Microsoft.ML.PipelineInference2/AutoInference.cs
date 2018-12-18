@@ -95,7 +95,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             {
                 var overallExecutionTime = Stopwatch.StartNew();
                 var stopwatch = new Stopwatch();
-                var probabilityUtils = new Sweeper.Algorithms.SweeperProbabilityUtils(AutoMlUtils.MakeDummyIHost());
+                var probabilityUtils = new Sweeper.Algorithms.SweeperProbabilityUtils();
 
                 while (!_terminator.ShouldTerminate(_history))
                 {

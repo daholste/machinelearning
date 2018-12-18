@@ -26,7 +26,7 @@ namespace Microsoft.ML.Runtime.Sweeper
         public class ArgumentsBase
         {
             //[Argument(ArgumentType.Multiple, HelpText = "Swept parameters", ShortName = "p", SignatureType = typeof(SignatureSweeperParameter))]
-            public IComponentFactory<IValueGenerator>[] SweptParameters;
+            public IValueGenerator[] SweptParameters;
 
             //[Argument(ArgumentType.LastOccurenceWins, HelpText = "Number of tries to generate distinct parameter sets.", ShortName = "r")]
             public int Retries = 10;
@@ -34,9 +34,8 @@ namespace Microsoft.ML.Runtime.Sweeper
 
         private readonly ArgumentsBase _args;
         protected readonly IValueGenerator[] SweepParameters;
-        protected readonly IHost Host;
 
-        protected SweeperBase(ArgumentsBase args, IHostEnvironment env, string name)
+        protected SweeperBase(ArgumentsBase args, string name)
         {
             //Contracts.CheckValue(env, nameof(env));
             //env.CheckNonWhiteSpace(name, nameof(name));
@@ -46,10 +45,10 @@ namespace Microsoft.ML.Runtime.Sweeper
 
             _args = args;
 
-            SweepParameters = args.SweptParameters.Select(p => p.CreateComponent(Host)).ToArray();
+            SweepParameters = args.SweptParameters.ToArray();
         }
 
-        protected SweeperBase(ArgumentsBase args, IHostEnvironment env, IValueGenerator[] sweepParameters, string name)
+        protected SweeperBase(ArgumentsBase args, IValueGenerator[] sweepParameters, string name)
         {
             //Contracts.CheckValue(env, nameof(env));
             //env.CheckNonWhiteSpace(name, nameof(name));

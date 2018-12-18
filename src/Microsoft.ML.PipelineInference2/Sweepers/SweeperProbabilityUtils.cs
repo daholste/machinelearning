@@ -15,11 +15,8 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
 {
     public sealed class SweeperProbabilityUtils
     {
-        private readonly Random _rng;
-
-        public SweeperProbabilityUtils(IHost host)
+        public SweeperProbabilityUtils()
         {
-            _rng = new Random(host.Rand.Next());
         }
 
         public static double Sum(double[] a)
@@ -70,8 +67,8 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
 
             for (int i = 0; i < numRVs; i++)
             {
-                u1 = _rng.NextDouble();
-                u2 = _rng.NextDouble();
+                u1 = AutoMlUtils.Random.NextDouble();
+                u2 = AutoMlUtils.Random.NextDouble();
                 rvs.Add(mu + sigma * Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2));
             }
 
@@ -105,7 +102,7 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
             int[] results = new int[numSamples];
             for (int i = 0; i < results.Length; i++)
             {
-                double u = _rng.NextDouble();
+                double u = AutoMlUtils.Random.NextDouble();
                 results[i] = BinarySearch(rw, u, 0, rw.Length - 1);
             }
 
@@ -114,7 +111,7 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
 
         public double SampleUniform()
         {
-            return _rng.NextDouble();
+            return AutoMlUtils.Random.NextDouble();
         }
 
         /// <summary>
@@ -165,7 +162,7 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
             return Normalize(weights);
         }
 
-        public static Float[] ParameterSetAsFloatArray(IHost host, IValueGenerator[] sweepParams, ParameterSet ps, bool expandCategoricals = true)
+        public static Float[] ParameterSetAsFloatArray(IValueGenerator[] sweepParams, ParameterSet ps, bool expandCategoricals = true)
         {
             AutoMlUtils.Assert(ps.Count == sweepParams.Length);
 
@@ -217,7 +214,7 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
             return result.ToArray();
         }
 
-        public static ParameterSet FloatArrayAsParameterSet(IHost host, IValueGenerator[] sweepParams, Float[] array, bool expandedCategoricals = true)
+        public static ParameterSet FloatArrayAsParameterSet(IValueGenerator[] sweepParams, Float[] array, bool expandedCategoricals = true)
         {
             AutoMlUtils.Assert(array.Length == sweepParams.Length);
 

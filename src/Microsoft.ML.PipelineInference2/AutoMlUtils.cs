@@ -24,13 +24,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
     {
         public static Random Random = new Random();
 
-        // Temporary hack
-        public static IHost MakeDummyIHost()
-        {
-            IHostEnvironment env = new MLContext();
-            return env.Register("host");
-        }
-
         public static IChannel MakeDummyChannel()
         {
             IHostEnvironment env = new MLContext();
@@ -520,73 +513,60 @@ namespace Microsoft.ML.Runtime.PipelineInference
         {
             return history.Select(h => ConvertToRunResult(h.Learner, h.PerformanceSummary, isMetricMaximizing)).ToArray();
         }
-
-        /// <summary>
-        /// Method to convert set of sweepable hyperparameters into <see cref="IComponentFactory"/> instances used
-        /// by the current smart hyperparameter sweepers.
-        /// </summary>
-        public static IComponentFactory<IValueGenerator>[] ConvertToComponentFactories(IEnumerable<TlcModule.SweepableParamAttribute> hps)
+        
+        public static IValueGenerator[] ConvertToValueGenerators(IEnumerable<TlcModule.SweepableParamAttribute> hps)
         {
-            var results = new IComponentFactory<IValueGenerator>[hps.Count()];
+            var results = new IValueGenerator[hps.Count()];
 
             for (int i = 0; i < hps.Count(); i++)
             {
                 switch (hps.ElementAt(i))
                 {
                     case TlcModule.SweepableDiscreteParamAttribute dp:
-                        results[i] = PipelineInference2.ComponentFactoryUtils.CreateFromFunction(env =>
+                        var dpArgs = new DiscreteParamArguments()
                         {
-                            var dpArgs = new DiscreteParamArguments()
-                            {
-                                Name = dp.Name,
-                                Values = dp.Options.Select(o => o.ToString()).ToArray()
-                            };
-                            return new DiscreteValueGenerator(dpArgs);
-                        });
+                            Name = dp.Name,
+                            Values = dp.Options.Select(o => o.ToString()).ToArray()
+                        };
+                        results[i] = new DiscreteValueGenerator(dpArgs);
                         break;
 
                     case TlcModule.SweepableFloatParamAttribute fp:
-                        results[i] = PipelineInference2.ComponentFactoryUtils.CreateFromFunction(env =>
+                        var fpArgs = new FloatParamArguments()
                         {
-                            var fpArgs = new FloatParamArguments()
-                            {
-                                Name = fp.Name,
-                                Min = fp.Min,
-                                Max = fp.Max,
-                                LogBase = fp.IsLogScale,
-                            };
-                            if (fp.NumSteps.HasValue)
-                            {
-                                fpArgs.NumSteps = fp.NumSteps.Value;
-                            }
-                            if (fp.StepSize.HasValue)
-                            {
-                                fpArgs.StepSize = fp.StepSize.Value;
-                            }
-                            return new FloatValueGenerator(fpArgs);
-                        });
+                            Name = fp.Name,
+                            Min = fp.Min,
+                            Max = fp.Max,
+                            LogBase = fp.IsLogScale,
+                        };
+                        if (fp.NumSteps.HasValue)
+                        {
+                            fpArgs.NumSteps = fp.NumSteps.Value;
+                        }
+                        if (fp.StepSize.HasValue)
+                        {
+                            fpArgs.StepSize = fp.StepSize.Value;
+                        }
+                        results[i] = new FloatValueGenerator(fpArgs);
                         break;
 
                     case TlcModule.SweepableLongParamAttribute lp:
-                        results[i] = PipelineInference2.ComponentFactoryUtils.CreateFromFunction(env =>
+                        var lpArgs = new LongParamArguments()
                         {
-                            var lpArgs = new LongParamArguments()
-                            {
-                                Name = lp.Name,
-                                Min = lp.Min,
-                                Max = lp.Max,
-                                LogBase = lp.IsLogScale
-                            };
-                            if (lp.NumSteps.HasValue)
-                            {
-                                lpArgs.NumSteps = lp.NumSteps.Value;
-                            }
-                            if (lp.StepSize.HasValue)
-                            {
-                                lpArgs.StepSize = lp.StepSize.Value;
-                            }
-                            return new LongValueGenerator(lpArgs);
-                        });
+                            Name = lp.Name,
+                            Min = lp.Min,
+                            Max = lp.Max,
+                            LogBase = lp.IsLogScale
+                        };
+                        if (lp.NumSteps.HasValue)
+                        {
+                            lpArgs.NumSteps = lp.NumSteps.Value;
+                        }
+                        if (lp.StepSize.HasValue)
+                        {
+                            lpArgs.StepSize = lp.StepSize.Value;
+                        }
+                        results[i] = new LongValueGenerator(lpArgs);
                         break;
                 }
             }

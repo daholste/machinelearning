@@ -4,6 +4,7 @@
 
 using System.Linq;
 using Microsoft.ML.Runtime;
+using Microsoft.ML.Runtime.PipelineInference;
 using Microsoft.ML.Runtime.Sweeper;
 
 [assembly: LoadableClass(typeof(UniformRandomSweeper), typeof(SweeperBase.ArgumentsBase), typeof(SignatureSweeper),
@@ -18,19 +19,19 @@ namespace Microsoft.ML.Runtime.Sweeper
     /// </summary>
     public sealed class UniformRandomSweeper : SweeperBase
     {
-        public UniformRandomSweeper(IHostEnvironment env, ArgumentsBase args)
-            : base(args, env, "UniformRandom")
+        public UniformRandomSweeper(ArgumentsBase args)
+            : base(args, "UniformRandom")
         {
         }
 
-        public UniformRandomSweeper(IHostEnvironment env, ArgumentsBase args, IValueGenerator[] sweepParameters)
-            : base(args, env, sweepParameters, "UniformRandom")
+        public UniformRandomSweeper(ArgumentsBase args, IValueGenerator[] sweepParameters)
+            : base(args, sweepParameters, "UniformRandom")
         {
         }
 
         protected override ParameterSet CreateParamSet()
         {
-            return new ParameterSet(SweepParameters.Select(sweepParameter => sweepParameter.CreateFromNormalized(Host.Rand.NextDouble())));
+            return new ParameterSet(SweepParameters.Select(sweepParameter => sweepParameter.CreateFromNormalized(AutoMlUtils.Random.NextDouble())));
         }
     }
 }
