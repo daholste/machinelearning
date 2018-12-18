@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.ML.PipelineInference2;
 using Microsoft.ML.Runtime.Data;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -89,12 +90,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 {
                     string name = (hasHeader && g.Count() == 1)
                         ? g.First().Item1.SuggestedName
-                        : GetName(g.Key.ItemType.RawKind, g.Key.Purpose, result);
+                        : GetName(g.Key.ItemType.RawKind(), g.Key.Purpose, result);
 
                     string range = GetRange(g.Select(t => t.Item1.ColumnIndex).ToArray());
                     if (g.Count() > 1)
                         ch.Info("Grouped data from columns '{0}' into vector column '{1}'.", range, name);
-                    result.Add(new GroupingColumn(name, g.Key.ItemType.RawKind, g.Key.Purpose, range));
+                    result.Add(new GroupingColumn(name, g.Key.ItemType.RawKind(), g.Key.Purpose, range));
                 }
             }
 

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Microsoft.ML.PipelineInference2;
 using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.Runtime.Internal.Utilities;
 
@@ -100,7 +101,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             public Column GetColumn()
             {
                 //Contracts.Assert(_isPurposeSuggested);
-                return new Column(_columnId, _suggestedPurpose, _type.Value.RawKind);
+                return new Column(_columnId, _suggestedPurpose, _type.Value.RawKind());
             }
 
             public T[] GetData<T>()
@@ -166,7 +167,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     string[] commonImageExtensions = { ".bmp", ".dib", ".rle", ".jpg", ".jpeg", ".jpe", ".jfif", ".gif", ".tif", ".tiff", ".png" };
                     foreach (var column in columns)
                     {
-                        if (column.IsPurposeSuggested || !column.Type.IsText)
+                        if (column.IsPurposeSuggested || !column.Type.IsText())
                             continue;
                         var data = column.GetData<ReadOnlyMemory<char>>();
 
@@ -221,7 +222,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         return;
 
                     var firstNumeric =
-                        columns.FirstOrDefault(x => !x.IsPurposeSuggested && !x.Type.IsVector && (x.Type.IsNumber || x.Type.IsBool));
+                        columns.FirstOrDefault(x => !x.IsPurposeSuggested && !x.Type.IsVector() && (x.Type.IsNumber() || x.Type.IsBool()));
 
                     if (firstNumeric != null)
                     {
@@ -239,7 +240,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     {
                         if (column.IsPurposeSuggested)
                             continue;
-                        if (column.Type.ItemType.IsNumber)
+                        if (column.Type.ItemType().IsNumber())
                             column.SuggestedPurpose = ColumnPurpose.NumericFeature;
                     }
                 }
@@ -253,7 +254,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     {
                         if (column.IsPurposeSuggested)
                             continue;
-                        if (column.Type.ItemType.IsBool)
+                        if (column.Type.ItemType().IsBool())
                             column.SuggestedPurpose = ColumnPurpose.NumericFeature;
                     }
                 }
@@ -267,7 +268,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     {
                         if (column.IsPurposeSuggested)
                             continue;
-                        if (column.Type.IsVector && column.Type.ItemType.IsText)
+                        if (column.Type.IsVector() && column.Type.ItemType().IsText())
                             column.SuggestedPurpose = ColumnPurpose.TextFeature;
                     }
                 }

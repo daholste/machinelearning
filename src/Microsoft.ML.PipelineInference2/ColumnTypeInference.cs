@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Microsoft.ML.PipelineInference2;
 using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.Runtime.Data.Conversion;
 using Microsoft.ML.Runtime.Internal.Utilities;
@@ -274,7 +275,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 //Contracts.Assert(colType.ItemType.IsText);
                 ValueGetter<VBuffer<ReadOnlyMemory<char>>> vecGetter = null;
                 ValueGetter<ReadOnlyMemory<char>> oneGetter = null;
-                bool isVector = colType.IsVector;
+                bool isVector = colType.IsVector();
                 if (isVector)
                     vecGetter = cursor.GetGetter<VBuffer<ReadOnlyMemory<char>>>(columnIndex);
                 else
@@ -363,7 +364,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             var outCols =
                 cols.Select((x, i) => new Column(x.ColumnId, names[i], x.SuggestedType)).ToArray();
 
-            var numerics = outCols.Count(x => x.ItemType.IsNumber);
+            var numerics = outCols.Count(x => x.ItemType.IsNumber());
 
             ch.Info("Detected {0} numeric and {1} text columns.", numerics, outCols.Length - numerics);
             if (hasHeader)

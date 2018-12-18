@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Microsoft.ML.PipelineInference2;
 using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.Runtime.EntryPoints;
 using Microsoft.ML.Runtime.EntryPoints.JsonUtils;
@@ -40,12 +41,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 var colInfo = new AutoInference.ColumnInfo
                 {
                     Name = dataSample.Schema.GetColumnName(columnIndex),
-                    ItemType = dataSample.Schema.GetColumnType(columnIndex).ItemType,
+                    ItemType = dataSample.Schema.GetColumnType(columnIndex).ItemType(),
                     IsHidden = dataSample.Schema.IsHidden(columnIndex)
                 };
 
                 // Exclude all hidden and non-numeric columns
-                if (colInfo.IsHidden || !colInfo.ItemType.IsNumber)
+                if (colInfo.IsHidden || !colInfo.ItemType.IsNumber())
                     continue;
 
                 foreach (var level in dependencyMapping.Keys.Reverse())
@@ -57,7 +58,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     // Include any numeric column present in initial dataset. Does not need
                     // any transforms applied to be present in final dataset.
-                    if (level == 0 && colInfo.ItemType.IsNumber && levelResponsibilities[colInfo].Count == 0)
+                    if (level == 0 && colInfo.ItemType.IsNumber() && levelResponsibilities[colInfo].Count == 0)
                     {
                         includedColumnIndices.Add(columnIndex);
                         break;
@@ -147,12 +148,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 var colInfo = new AutoInference.ColumnInfo
                 {
                     IsHidden = false,
-                    ItemType = transformedData.Schema.GetColumnType(i).ItemType,
+                    ItemType = transformedData.Schema.GetColumnType(i).ItemType(),
                     Name = transformedData.Schema.GetColumnName(i)
                 };
                 mapping.Add(colInfo, appliedTransforms.Where(t =>
                     t.RoutingStructure.ColumnsProduced.Any(o => o.Name == colInfo.Name &&
-                    o.IsNumeric == transformedData.Schema.GetColumnType(i).ItemType.IsNumber)).ToList());
+                    o.IsNumeric == transformedData.Schema.GetColumnType(i).ItemType().IsNumber())).ToList());
             }
             return mapping;
         }

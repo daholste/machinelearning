@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.ML.PipelineInference;
+using Microsoft.ML.PipelineInference2;
 using Microsoft.ML.Runtime.CommandLine;
 using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.Runtime.EntryPoints;
@@ -160,9 +161,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 _columnName = new Lazy<string>(() => _data.Schema.GetColumnName(_columnId));
                 _hasMissing = new Lazy<bool>(() =>
                 {
-                    if (Type.ItemType != NumberType.R4)
+                    if (Type.ItemType() != NumberType.R4)
                         return false;
-                    return Type.IsVector ? HasMissingVector() : HasMissingOne();
+                    return Type.IsVector() ? HasMissingVector() : HasMissingOne();
                 });
             }
 
@@ -360,7 +361,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         columnNameQuoted.Append(col.ColumnName);
                     }
 
-                    if (col.Type.IsText)
+                    if (col.Type.IsText())
                     {
                         col.GetUniqueValueCounts<ReadOnlyMemory<char>>(out var unique, out var _, out var _);
                         ch.Info("Label column '{0}' is text. Suggested auto-labeling.", col.ColumnName);
@@ -445,7 +446,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         columnNameQuoted.AppendFormat("{0}", col.ColumnName);
                     }
 
-                    if (col.Type.IsText)
+                    if (col.Type.IsText())
                     {
                         ch.Info("Group Id column '{0}' is text. Suggested hashing.", col.ColumnName);
                         // REVIEW: we could potentially apply HashJoin to vectors of text.
@@ -505,10 +506,10 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     }
 
                     var col = columns[firstLabelColId];
-                    if (col.Type.IsText)
+                    if (col.Type.IsText())
                         yield break;
 
-                    if (col.Type.IsKnownSizeVector && col.Type.ItemType == NumberType.R4)
+                    if (col.Type.IsKnownSizeVector() && col.Type.ItemType() == NumberType.R4)
                     {
                         ch.Info("Label column '{0}' has type {1}, this can be only a multi-output regression problem.", col.ColumnName, col.Type);
                         yield break;
@@ -554,7 +555,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     foreach (var column in columns)
                     {
-                        if (!column.Type.ItemType.IsText || column.Purpose != ColumnPurpose.CategoricalFeature)
+                        if (!column.Type.ItemType().IsText() || column.Purpose != ColumnPurpose.CategoricalFeature)
                             continue;
 
                         var columnArgument = new StringBuilder();
@@ -633,7 +634,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                 private bool IsDictionaryOk(IntermediateColumn column, Double dataSampleFraction)
                 {
-                    if (column.Type.IsVector)
+                    if (column.Type.IsVector())
                         return false;
                     //Contracts.Assert(dataSampleFraction > 0);
                     int total;
@@ -660,7 +661,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     foreach (var column in columns)
                     {
-                        if (!column.Type.ItemType.IsBool || column.Purpose != ColumnPurpose.NumericFeature)
+                        if (!column.Type.ItemType().IsBool() || column.Purpose != ColumnPurpose.NumericFeature)
                             continue;
                         columnArgument.Append("col=");
                         if (CmdQuoter.NeedsQuoting(column.ColumnName))
@@ -867,7 +868,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     List<string> textColumnNames =
                         columns.Where(
-                            column => column.Type.ItemType.IsText && column.Purpose == ColumnPurpose.TextFeature)
+                            column => column.Type.ItemType().IsText() && column.Purpose == ColumnPurpose.TextFeature)
                             .Select(column => column.ColumnName).ToList();
 
                     if ((textColumnNames.Count == 0) ||
@@ -966,7 +967,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
                     foreach (var column in columns)
                     {
-                        if (!column.Type.ItemType.IsText || column.Purpose != ColumnPurpose.TextFeature)
+                        if (!column.Type.ItemType().IsText() || column.Purpose != ColumnPurpose.TextFeature)
                             continue;
                         ch.Info("Suggested text featurization for text column '{0}'.", column.ColumnName);
 
@@ -1013,7 +1014,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 {
                     List<string> textColumnNames =
                         columns.Where(
-                            column => column.Type.ItemType.IsText && column.Purpose == ColumnPurpose.TextFeature)
+                            column => column.Type.ItemType().IsText() && column.Purpose == ColumnPurpose.TextFeature)
                             .Select(column => column.ColumnName).ToList();
 
                     if ((textColumnNames.Count == 0) ||
@@ -1054,7 +1055,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 {
                     List<string> textColumnNames =
                         columns.Where(
-                            column => column.Type.ItemType.IsText && column.Purpose == ColumnPurpose.TextFeature)
+                            column => column.Type.ItemType().IsText() && column.Purpose == ColumnPurpose.TextFeature)
                             .Select(column => column.ColumnName).ToList();
 
                     if ((textColumnNames.Count == 0) ||
@@ -1098,7 +1099,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                     var columnNameQuoted = new StringBuilder();
                     foreach (var column in columns)
                     {
-                        if (column.Type.ItemType != NumberType.R4 || column.Purpose != ColumnPurpose.NumericFeature)
+                        if (column.Type.ItemType() != NumberType.R4 || column.Purpose != ColumnPurpose.NumericFeature)
                             continue;
                         if (!column.HasMissing)
                             continue;
@@ -1154,7 +1155,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 {
                     var selectedColumns = columns.Where(c => !IgnoreColumn(c.Purpose)).ToArray();
                     var colList = selectedColumns.Select(c => c.ColumnName).ToArray();
-                    bool allColumnsNumeric = selectedColumns.All(c => c.Purpose == ColumnPurpose.NumericFeature && c.Type.ItemType != BoolType.Instance);
+                    bool allColumnsNumeric = selectedColumns.All(c => c.Purpose == ColumnPurpose.NumericFeature && c.Type.ItemType() != BoolType.Instance);
                     bool allColumnsNonNumeric = selectedColumns.All(c => c.Purpose != ColumnPurpose.NumericFeature);
 
                     if (colList.Length > 0)
@@ -1253,9 +1254,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
                             columnNameQuoted.Append(column.ColumnName);
                         columnListQuoted.Add(columnNameQuoted.ToString());
 
-                        if (column.Type.ItemType.IsText)
+                        if (column.Type.ItemType().IsText())
                             colSpecTextOnly.Add(column.ColumnName);
-                        isAllText = isAllText && column.Type.ItemType.IsText;
+                        isAllText = isAllText && column.Type.ItemType().IsText();
                     }
 
                     if (count == 1 && colSpec.ToString() != DefaultColumnNames.Name)
