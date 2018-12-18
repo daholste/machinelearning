@@ -27,13 +27,6 @@ namespace Microsoft.ML.Runtime.Sweeper.Algorithms
             return total;
         }
 
-        public static double NormalPdf(double x, double mean, double variance)
-        {
-            const double minVariance = 1e-200;
-            variance = Math.Max(variance, minVariance);
-            return 1 / Math.Sqrt(2 * Math.PI * variance) * Math.Exp(-Math.Pow(x - mean, 2) / (2 * variance));
-        }
-
         public static double NormalCdf(double x, double mean, double variance)
         {
             double centered = x - mean;
