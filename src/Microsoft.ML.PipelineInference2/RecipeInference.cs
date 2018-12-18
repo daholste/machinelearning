@@ -50,29 +50,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             }
 
             public readonly SuggestedLearner[] Learners;
-            public readonly int PreferenceIndex;
-
-            public SuggestedRecipe(string description,
-                TransformInference.SuggestedTransform[] transforms,
-                SuggestedLearner[] learners,
-                int preferenceIndex = -1)
-            {
-                //Contracts.Check(transforms != null, "Transforms cannot be null");
-                //Contracts.Check(learners != null, "Learners cannot be null");
-                Description = description;
-                Transforms = transforms;
-                Learners = FillLearnerNames(learners);
-                PreferenceIndex = preferenceIndex;
-            }
-
-            private static SuggestedLearner[] FillLearnerNames(SuggestedLearner[] learners)
-            {
-                for (int i = 0; i < learners.Length; i++)
-                    learners[i].LearnerName = learners[i].LoadableClassInfo.LoadNames[0];
-                return learners;
-            }
-
-            public override string ToString() => Description;
         }
 
         public readonly struct InferenceResult
@@ -82,55 +59,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             {
                 SuggestedRecipes = suggestedRecipes;
             }
-        }
-
-        public abstract class Recipe
-        {
-            public virtual List<Type> AllowedTransforms() => new List<Type>()
-            {
-                typeof (TransformInference.Experts.AutoLabel),
-                typeof (TransformInference.Experts.GroupIdHashRename),
-                typeof (TransformInference.Experts.NameColumnConcatRename),
-                typeof (TransformInference.Experts.LabelAdvisory),
-                //typeof (TransformInference.Experts.Boolean),
-                typeof (TransformInference.Experts.Categorical),
-                typeof (TransformInference.Experts.Text),
-                typeof (TransformInference.Experts.NumericMissing),
-                typeof (TransformInference.Experts.FeaturesColumnConcatRename),
-            };
-
-            public virtual List<Type> QualifierTransforms() => AllowedTransforms();
-
-            protected virtual TransformInference.SuggestedTransform[] GetSuggestedTransforms(
-                TransformInference.InferenceResult transformInferenceResult, Type predictorType)
-            {
-                List<Type> allowedTransforms = AllowedTransforms();
-                List<Type> qualifierTransforms = QualifierTransforms();
-
-                if (transformInferenceResult.SuggestedTransforms.Any(transform => qualifierTransforms.Contains(transform.ExpertType)))
-                {
-                    return transformInferenceResult.SuggestedTransforms
-                        .Where(transform => allowedTransforms.Contains(transform.ExpertType) || qualifierTransforms.Contains(transform.ExpertType))
-                        .ToArray();
-                }
-
-                return null;
-            }
-
-            public virtual IEnumerable<SuggestedRecipe> Apply(
-                TransformInference.InferenceResult transformInferenceResult, Type predictorType, IChannel ch)
-            {
-                TransformInference.SuggestedTransform[] transforms = GetSuggestedTransforms(
-                    transformInferenceResult, predictorType);
-
-                if (transforms?.Length > 0)
-                {
-                    foreach (var recipe in ApplyCore(predictorType, transforms))
-                        yield return recipe;
-                }
-            }
-
-            protected abstract IEnumerable<SuggestedRecipe> ApplyCore(Type predictorType, TransformInference.SuggestedTransform[] transforms);
         }
 
         public static TextLoader.Arguments MyAutoMlInferTextLoaderArguments(IHostEnvironment env,

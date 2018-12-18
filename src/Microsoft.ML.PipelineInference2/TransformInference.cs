@@ -136,20 +136,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             }
         }
 
-        public readonly struct Column
-        {
-            public readonly Data.ColumnType Type;
-            public readonly string Name;
-            public readonly ColumnPurpose Purpose;
-
-            public Column(Data.ColumnType type, string name, ColumnPurpose purpose)
-            {
-                Type = type;
-                Name = name;
-                Purpose = purpose;
-            }
-        }
-
         public class IntermediateColumn
         {
             private readonly IDataView _data;
@@ -180,7 +166,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 });
             }
 
-            public string GetTempColumnName(string tag = null) => _data.Schema.GetTempColumnName(tag);
+            public string GetTempColumnName(string tag = null) => _data.Schema.GetTemporaryColumnName(tag);
 
             private bool HasMissingOne()
             {

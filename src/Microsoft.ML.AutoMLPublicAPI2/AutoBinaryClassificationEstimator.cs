@@ -17,24 +17,34 @@ namespace Microsoft.ML.AutoMLPublicAPI2
 {
     public static class AutoMlExtension
     {
-        public static AutoMlBinaryClassificationEstimator Auto(this BinaryClassificationTrainers trainers,
+        public static AutoBinaryClassificationEstimator Auto(this BinaryClassificationTrainers trainers,
             int maxIterations = 10, IDataView validationData = null)
         {
             // hack: init new MLContext
             var mlContext = new MLContext();
 
-            return new AutoMlBinaryClassificationEstimator(mlContext, maxIterations, validationData);
+            return new AutoBinaryClassificationEstimator(mlContext, maxIterations, validationData);
         }
+
+        public static AutoMultiClassClassificationEstimator Auto(this MulticlassClassificationContext.MulticlassClassificationTrainers trainers,
+            int maxIterations = 10, IDataView validationData = null)
+        {
+            // hack: init new MLContext
+            var mlContext = new MLContext();
+
+            return new AutoMultiClassClassificationEstimator(mlContext, maxIterations, validationData);
+        }
+
     }
 
-    public class AutoMlBinaryClassificationEstimator : IEstimator<ITransformer>
+    public class AutoBinaryClassificationEstimator : IEstimator<ITransformer>
     {
         private readonly IHostEnvironment _env;
         private readonly int _maxIterations;
 
         public IDataView ValidationData { get; set; }
 
-        public AutoMlBinaryClassificationEstimator(IHostEnvironment env, int maxIterations = 10, IDataView validationData = null)
+        public AutoBinaryClassificationEstimator(IHostEnvironment env, int maxIterations = 10, IDataView validationData = null)
         {
             _env = env;
             _maxIterations = maxIterations;
@@ -50,7 +60,7 @@ namespace Microsoft.ML.AutoMLPublicAPI2
                 PipelineSweeperSupportedMetrics.GetSupportedMetric(PipelineSweeperSupportedMetrics.Metrics.RSquared),
                 rocketEngine, terminator, MacroUtils.TrainerKinds.SignatureRegressorTrainer,
                    trainData, ValidationData);
-            var bestPipelines = amls.InferPipelines(1, 1, 100);
+            var bestPipelines = amls.InferPipelines(1, 3, 100);
             var bestPipeline = bestPipelines.First();
 
             // hack: start dummy host & channel

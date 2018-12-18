@@ -317,10 +317,17 @@ namespace Microsoft.ML.Runtime.Data
             Func<IHostEnvironment, IDataView, ISchemaBoundMapper, RoleMappedSchema, IDataScorerTransform> factoryFunc;
             if (info == null)
             {
-                factoryFunc = (env, data, innerMapper, trainSchema) =>
+                /*factoryFunc = (env, data, innerMapper, trainSchema) =>
                     new GenericScorer(
                         env,
                         new GenericScorer.Arguments() { Suffix = suffix },
+                        data,
+                        innerMapper,
+                        trainSchema);*/
+                factoryFunc = (env, data, innerMapper, trainSchema) =>
+                    new BinaryClassifierScorer(
+                        env,
+                        new BinaryClassifierScorer.Arguments() { Suffix = suffix },
                         data,
                         innerMapper,
                         trainSchema);

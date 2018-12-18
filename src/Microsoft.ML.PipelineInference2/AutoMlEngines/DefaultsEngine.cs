@@ -44,22 +44,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 //Contracts.Assert(0 <= _currentLearnerIndex && _currentLearnerIndex < AvailableLearners.Length);
 
                 // Select hyperparameters and transforms based on learner and history.
-                PipelinePattern pipeline;
-                int count = 0;
-                bool valid;
                 var learner = AvailableLearners[_currentLearnerIndex];
-
-                do
-                {   // Make sure transforms set is valid. Repeat until passes verifier.
-                    pipeline = new PipelinePattern(SampleTransforms(out var transformsBitMask),
-                        learner, "", Env);
-                    valid = PipelineVerifier(pipeline, transformsBitMask);
-                    count++;
-                } while (!valid && count <= 1000);
+                var pipeline = new PipelinePattern(SampleTransforms(out var transformsBitMask),
+                    learner, "", Env);
 
                 // Keep only valid pipelines.
-                if (valid)
-                    candidates.Add(pipeline);
+                candidates.Add(pipeline);
 
                 // Update current index
                 _currentLearnerIndex = (_currentLearnerIndex + 1) % AvailableLearners.Length;
