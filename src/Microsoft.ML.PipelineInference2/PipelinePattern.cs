@@ -98,7 +98,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             // train learner
             var calibratorFactory = new PlattCalibratorTrainerFactory();
             var caliTrainer = calibratorFactory?.CreateComponent(_env);
-            var predictor = TrainUtils.Train(_env, AutoMlUtils.MakeDummyChannel(), roleMappedTrainData, learner, calibratorFactory, 1000000000);
+            var predictor = TrainUtils.Train(_env, AutoMlUtils.MakeDummyChannel(), roleMappedTrainData, (ITrainer)learner, calibratorFactory, 1000000000);
             return new PipelinePatternTransform(_env, transformerChain, predictor);
         }
     }

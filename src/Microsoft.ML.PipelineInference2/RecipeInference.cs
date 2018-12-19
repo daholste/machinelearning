@@ -78,36 +78,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// Given a predictor type returns a set of all permissible learners (with their sweeper params, if defined).
         /// </summary>
         /// <returns>Array of viable learners.</returns>
-        public static SuggestedRecipe.SuggestedLearner[] AllowedLearners(MLContext env, MacroUtils.TrainerKinds trainerKind)
+        public static SuggestedRecipe.SuggestedLearner[] AllowedLearners(MLContext mlContext, MacroUtils.TrainerKinds trainerKind)
         {
             var learnerCatalogItems = LearnerCatalog.Instance.GetLearners(trainerKind);
-
-
-            // for binary classification only
-            var learnerNames = new[]
-            {
-                "AveragedPerceptronBinaryClassifier",
-                "FastForestBinaryClassifier",
-                "FastTreeBinaryClassifier",
-                "LightGbmBinaryClassifier",
-                "LinearSvmBinaryClassifier",
-                "LogisticRegressionBinaryClassifier",
-                "StochasticGradientDescentBinaryClassifier",
-                //"SymSgdBinaryClassifier",
-            };
-
-            var binaryClassificationLearners = new[]
-            {
-                typeof(AveragedPerceptronTrainer),
-                typeof(FastForestClassification),
-                typeof(FastTreeBinaryClassificationTrainer),
-                typeof(LightGbmBinaryTrainer),
-                typeof(LinearSvm),
-                typeof(LogisticRegression),
-                typeof(StochasticGradientDescentClassificationTrainer),
-                //typeof(StochasticDualCoordinateAscentBinaryClassifier),
-                typeof(SymSgdClassificationTrainer),
-            };
 
             var learners = new List<SuggestedRecipe.SuggestedLearner>();
             foreach (var learnerCatalogItem in learnerCatalogItems)
@@ -116,12 +89,11 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 var learnerName = learnerCatalogItem.GetLearnerName();
                 var learner = new SuggestedRecipe.SuggestedLearner
                 {
-                    PipelineNode = new TrainerPipelineNode(sweepParams, learnerName: learnerName),
+                    PipelineNode = new TrainerPipelineNode(mlContext, learnerCatalogItem, sweepParams),
                     LearnerName = learnerName
                 };
                 learners.Add(learner);
             }
-
             return learners.ToArray();
         }
     }

@@ -73,13 +73,18 @@ namespace Microsoft.ML.Runtime.PipelineInference
 
     public sealed class TrainerPipelineNode : PipelineNodeBase
     {
-        public readonly string LearnerName;
-
         public IEnumerable<SweepableParam> SweepParams { get; }
 
-        public TrainerPipelineNode(IEnumerable<SweepableParam> sweepParams = null,
-            ParameterSet hyperParameterSet = null, string learnerName = null)
+        private readonly MLContext _mlContext;
+        private readonly ILearnerCatalogItem _learnerCatalogItem;
+
+        public TrainerPipelineNode(MLContext mlContext,
+            ILearnerCatalogItem learnerCatalogItem,
+            IEnumerable<SweepableParam> sweepParams = null,
+            ParameterSet hyperParameterSet = null)
         {
+            _mlContext = mlContext;
+            _learnerCatalogItem = learnerCatalogItem;
             SweepParams = sweepParams.ToArray();
             HyperSweeperParamSet = hyperParameterSet?.Clone();
 
@@ -88,107 +93,19 @@ namespace Microsoft.ML.Runtime.PipelineInference
             {
                 PropagateParamSetValues(HyperSweeperParamSet, SweepParams);
             }
-
-            LearnerName = learnerName;
         }
 
         public ITrainerEstimator<ISingleFeaturePredictionTransformer<IPredictor>, IPredictor> BuildTrainer(MLContext env)
         {
-            ITrainerEstimator<ISingleFeaturePredictionTransformer<IPredictor>, IPredictor> trainer;
-
-            if(LearnerName == "AveragedPerceptronBinaryClassifier")
-            {
-                Action<AveragedPerceptronTrainer.Arguments> argsFunc = null;
-                if (HyperSweeperParamSet != null)
-                {
-                    argsFunc = (x) => AutoMlUtils.UpdatePropertiesAndFields(x, SweepParams);
-                }
-                trainer = new AveragedPerceptronTrainer(env, advancedSettings: argsFunc);
-            }
-            else if (LearnerName == "FastForestBinaryClassifier")
-            {
-                Action<FastForestClassification.Arguments> argsFunc = null;
-                if (HyperSweeperParamSet != null)
-                {
-                    argsFunc = (x) => AutoMlUtils.UpdatePropertiesAndFields(x, SweepParams);
-                }
-                trainer = new FastForestClassification(env, advancedSettings: argsFunc);
-            }
-            else if (LearnerName == "FastTreeBinaryClassifier")
-            {
-                Action<FastTreeBinaryClassificationTrainer.Arguments> argsFunc = null;
-                if (HyperSweeperParamSet != null)
-                {
-                    argsFunc = (x) => AutoMlUtils.UpdatePropertiesAndFields(x, SweepParams);
-                }
-                trainer = new FastTreeBinaryClassificationTrainer(env, advancedSettings: argsFunc);
-            }
-            /*else if (LearnerName == "FieldAwareFactorizationMachineBinaryClassifier")
-            {
-                trainer = new FieldAwareFactorizationMachineTrainer(env, new FieldAwareFactorizationMachineTrainer.Arguments());
-            }*/
-            else if (LearnerName == "LightGbmBinaryClassifier")
-            {
-                Action<LightGbmArguments> argsFunc = null;
-                if (HyperSweeperParamSet != null)
-                {
-                    argsFunc = (x) => AutoMlUtils.UpdatePropertiesAndFields(x, SweepParams);
-                }
-                trainer = new LightGbmBinaryTrainer(env, advancedSettings: argsFunc);
-            }
-            else if (LearnerName == "LinearSvmBinaryClassifier")
-            {
-                var args = new LinearSvm.Arguments();
-                if (HyperSweeperParamSet != null)
-                {
-                    AutoMlUtils.UpdatePropertiesAndFields(args, SweepParams);
-                }
-                trainer = new LinearSvm(env, args);
-            }
-            else if (LearnerName == "LogisticRegressionBinaryClassifier")
-            {
-                Action<LogisticRegression.Arguments> argsFunc = null;
-                if (HyperSweeperParamSet != null)
-                {
-                    argsFunc = (x) => AutoMlUtils.UpdatePropertiesAndFields(x, SweepParams);
-                }
-                trainer = new LogisticRegression(env, advancedSettings: argsFunc);
-            }
-            /*else if (LearnerName == "StochasticDualCoordinateAscentBinaryClassifier")
-            {
-                trainer = new SdcaBinaryTrainer(env);
-            }*/
-            else if (LearnerName == "StochasticGradientDescentBinaryClassifier")
-            {
-                Action<StochasticGradientDescentClassificationTrainer.Arguments> argsFunc = null;
-                if (HyperSweeperParamSet != null)
-                {
-                    argsFunc = (x) => AutoMlUtils.UpdatePropertiesAndFields(x, SweepParams);
-                }
-                trainer = new StochasticGradientDescentClassificationTrainer(env, advancedSettings: argsFunc);
-            }
-            else if (LearnerName == "SymSgdBinaryClassifier")
-            {
-                Action<SymSgdClassificationTrainer.Arguments> argsFunc = null;
-                if (HyperSweeperParamSet != null)
-                {
-                    argsFunc = (x) => AutoMlUtils.UpdatePropertiesAndFields(x, SweepParams);
-                }
-                trainer = new SymSgdClassificationTrainer(env, advancedSettings: argsFunc);
-            }
-            else
-            {
-                trainer = new AveragedPerceptronTrainer(env);
-            }
-
-            return trainer;
+            var sweepParams = HyperSweeperParamSet == null ? null : SweepParams;
+            return _learnerCatalogItem.CreateInstance(_mlContext, sweepParams);
         }
 
-        public TrainerPipelineNode Clone() => new TrainerPipelineNode(SweepParams, HyperSweeperParamSet, LearnerName);
+        public TrainerPipelineNode Clone() => new TrainerPipelineNode(_mlContext, _learnerCatalogItem, SweepParams, HyperSweeperParamSet);
 
         public override string ToString()
         {
-            return $"{LearnerName}{{{string.Join(", ", SweepParams.Where(p => p != null && p.RawValue != null).Select(p => $"{p.Name}:{p.ProcessedValue()}"))}}}";
+            return $"{_learnerCatalogItem.GetLearnerName()}{{{string.Join(", ", SweepParams.Where(p => p != null && p.RawValue != null).Select(p => $"{p.Name}:{p.ProcessedValue()}"))}}}";
         }
 
         public ParameterSet BuildParameterSet()

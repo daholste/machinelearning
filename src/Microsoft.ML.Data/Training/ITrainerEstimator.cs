@@ -6,9 +6,14 @@ using Microsoft.ML.Core.Data;
 
 namespace Microsoft.ML.Runtime.Training
 {
-    public interface ITrainerEstimator<out TTransformer, out TPredictor> : IEstimator<TTransformer>, ITrainer<TPredictor>
+    public interface ITrainerEstimator<out TTransformer, out TPredictor> : IEstimator<TTransformer>
         where TTransformer : ISingleFeaturePredictionTransformer<TPredictor>
         where TPredictor : IPredictor
     {
+        /// <summary>
+        /// Auxiliary information about the trainer in terms of its capabilities
+        /// and requirements.
+        /// </summary>
+        TrainerInfo Info { get; }
     }
 }
