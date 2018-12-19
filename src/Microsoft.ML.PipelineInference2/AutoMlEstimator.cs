@@ -47,8 +47,8 @@ namespace Microsoft.ML.AutoMLPublicAPI2
             var terminator = new IterationTerminator(_maxIterations);
 
             var amls = new AutoMlMlState(_env,
-                PipelineSweeperSupportedMetrics.GetSupportedMetric(PipelineSweeperSupportedMetrics.Metrics.RSquared),
-                rocketEngine, terminator, MacroUtils.TrainerKinds.SignatureRegressorTrainer,
+                PipelineSweeperSupportedMetrics.GetSupportedMetric(PipelineSweeperSupportedMetrics.Metrics.Accuracy),
+                rocketEngine, terminator, MacroUtils.TrainerKinds.SignatureBinaryClassifierTrainer,
                    trainData, ValidationData);
             var bestPipelines = amls.InferPipelines(1, 3, 100);
             var bestPipeline = bestPipelines.First();

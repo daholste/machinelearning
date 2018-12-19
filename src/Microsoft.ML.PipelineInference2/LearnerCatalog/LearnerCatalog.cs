@@ -15,6 +15,8 @@ namespace Microsoft.ML.PipelineInference2
                     new ILearnerCatalogItem[] {
                         new AveragedPerceptronCatalogItem(),
                         new FastForestCatalogItem(),
+                        new FastTreeBinaryClassifierCatalogItem(),
+                        new LightGbmBinaryTrainerCatalogItem()
                     } },
             };
 

@@ -33,7 +33,11 @@ namespace Microsoft.ML.PipelineInference2
 
         public ITrainerEstimator<ISingleFeaturePredictionTransformer<IPredictor>, IPredictor> CreateInstance(MLContext mlContext, IEnumerable<SweepableParam> sweepParams)
         {
-            Action<AveragedPerceptronTrainer.Arguments> argsFunc = (obj) => AutoMlUtils.UpdatePropertiesAndFields(obj, sweepParams);
+            Action<AveragedPerceptronTrainer.Arguments> argsFunc = null;
+            if (sweepParams != null)
+            {
+                argsFunc = (obj) => AutoMlUtils.UpdatePropertiesAndFields(obj, sweepParams);
+            }
             return new AveragedPerceptronTrainer(mlContext, advancedSettings: argsFunc);
         }
 
@@ -54,7 +58,11 @@ namespace Microsoft.ML.PipelineInference2
 
         public ITrainerEstimator<ISingleFeaturePredictionTransformer<IPredictor>, IPredictor> CreateInstance(MLContext mlContext, IEnumerable<SweepableParam> sweepParams)
         {
-            Action<FastForestClassification.Arguments> argsFunc = (obj) => AutoMlUtils.UpdatePropertiesAndFields(obj, sweepParams);
+            Action<FastForestClassification.Arguments> argsFunc = null;
+            if (sweepParams != null)
+            {
+                argsFunc = (obj) => AutoMlUtils.UpdatePropertiesAndFields(obj, sweepParams);
+            }
             return new FastForestClassification(mlContext, advancedSettings: argsFunc);
         }
 
@@ -75,7 +83,11 @@ namespace Microsoft.ML.PipelineInference2
 
         public ITrainerEstimator<ISingleFeaturePredictionTransformer<IPredictor>, IPredictor> CreateInstance(MLContext mlContext, IEnumerable<SweepableParam> sweepParams)
         {
-            Action<FastTreeBinaryClassificationTrainer.Arguments> argsFunc = (obj) => AutoMlUtils.UpdatePropertiesAndFields(obj, sweepParams);
+            Action<FastTreeBinaryClassificationTrainer.Arguments> argsFunc = null;
+            if (sweepParams != null)
+            {
+                argsFunc = (obj) => AutoMlUtils.UpdatePropertiesAndFields(obj, sweepParams);
+            }
             return new FastTreeBinaryClassificationTrainer(mlContext, advancedSettings: argsFunc);
         }
 
@@ -110,7 +122,11 @@ namespace Microsoft.ML.PipelineInference2
 
         public ITrainerEstimator<ISingleFeaturePredictionTransformer<IPredictor>, IPredictor> CreateInstance(MLContext mlContext, IEnumerable<SweepableParam> sweepParams)
         {
-            Action<FastTreeBinaryClassificationTrainer.Arguments> argsFunc = (obj) => AutoMlUtils.UpdatePropertiesAndFields(obj, sweepParams);
+            Action<FastTreeBinaryClassificationTrainer.Arguments> argsFunc = null;
+            if (sweepParams != null)
+            {
+                argsFunc = (obj) => AutoMlUtils.UpdatePropertiesAndFields(obj, sweepParams);
+            }
             return new FastTreeBinaryClassificationTrainer(mlContext, advancedSettings: argsFunc);
         }
 
