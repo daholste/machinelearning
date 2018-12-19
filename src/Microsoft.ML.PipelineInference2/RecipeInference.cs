@@ -19,6 +19,9 @@ using System.Reflection;
 using System.Text;
 using Microsoft.ML.Runtime.Training;
 using Microsoft.ML.PipelineInference2;
+using Microsoft.ML.Runtime.LightGBM;
+using Microsoft.ML.Runtime.Learners;
+using Microsoft.ML.Trainers.SymSgd;
 
 namespace Microsoft.ML.Runtime.PipelineInference
 {
@@ -50,15 +53,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
             public readonly SuggestedLearner[] Learners;
         }
 
-        public readonly struct InferenceResult
-        {
-            public readonly SuggestedRecipe[] SuggestedRecipes;
-            public InferenceResult(SuggestedRecipe[] suggestedRecipes)
-            {
-                SuggestedRecipes = suggestedRecipes;
-            }
-        }
-
         public static TextLoader.Arguments MyAutoMlInferTextLoaderArguments(MLContext env,
             string dataFile, string labelColName)
         {
@@ -86,6 +80,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// <returns>Array of viable learners.</returns>
         public static SuggestedRecipe.SuggestedLearner[] AllowedLearners(MLContext env, MacroUtils.TrainerKinds trainerKind)
         {
+            var learnerCatalogItems = LearnerCatalog.Instance.GetLearners(trainerKind);
+
+
             // for binary classification only
             var learnerNames = new[]
             {
@@ -99,10 +96,24 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 //"SymSgdBinaryClassifier",
             };
 
-            var learners = new List<SuggestedRecipe.SuggestedLearner>();
-            foreach (var learnerName in learnerNames)
+            var binaryClassificationLearners = new[]
             {
-                var sweepParams = AutoMlUtils.GetSweepRangesNewApi(learnerName);
+                typeof(AveragedPerceptronTrainer),
+                typeof(FastForestClassification),
+                typeof(FastTreeBinaryClassificationTrainer),
+                typeof(LightGbmBinaryTrainer),
+                typeof(LinearSvm),
+                typeof(LogisticRegression),
+                typeof(StochasticGradientDescentClassificationTrainer),
+                //typeof(StochasticDualCoordinateAscentBinaryClassifier),
+                typeof(SymSgdClassificationTrainer),
+            };
+
+            var learners = new List<SuggestedRecipe.SuggestedLearner>();
+            foreach (var learnerCatalogItem in learnerCatalogItems)
+            {
+                var sweepParams = learnerCatalogItem.GetHyperparamSweepRanges();
+                var learnerName = learnerCatalogItem.GetLearnerName();
                 var learner = new SuggestedRecipe.SuggestedLearner
                 {
                     PipelineNode = new TrainerPipelineNode(sweepParams, learnerName: learnerName),

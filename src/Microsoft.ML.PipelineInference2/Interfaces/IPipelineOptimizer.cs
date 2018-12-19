@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.ML.PipelineInference2;
 using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.Runtime.EntryPoints;
 using Microsoft.ML.Runtime.PipelineInference;
@@ -137,7 +138,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             // Update hyperparameters.
             for (int i = 0; i < hyperParams.Count(); i++)
             {
-                if (hyperParams.ElementAt(i) is TlcModule.SweepableDiscreteParamAttribute dp)
+                if (hyperParams.ElementAt(i) is SweepableDiscreteParam dp)
                     hyperParams.ElementAt(i).RawValue = (int)values[i];
                 else
                     hyperParams.ElementAt(i).RawValue = values[i];

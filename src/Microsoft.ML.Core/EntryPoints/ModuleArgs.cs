@@ -280,7 +280,7 @@ namespace Microsoft.ML.Runtime.EntryPoints
         /// <summary>
         /// An attribute used to indicate suggested sweep ranges for parameter sweeping.
         /// </summary>
-        public abstract class SweepableParamAttribute : Attribute
+        internal abstract class SweepableParamAttribute : Attribute
         {
             public string Name { get; set; }
             private IComparable _rawValue;
@@ -318,7 +318,7 @@ namespace Microsoft.ML.Runtime.EntryPoints
         /// option using the index.
         /// </summary>
         [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-        public sealed class SweepableDiscreteParamAttribute : SweepableParamAttribute
+        internal sealed class SweepableDiscreteParamAttribute : SweepableParamAttribute
         {
             public object[] Options { get; }
 
@@ -404,7 +404,7 @@ namespace Microsoft.ML.Runtime.EntryPoints
         /// An attribute used to indicate suggested sweep ranges for float parameter sweeping.
         /// </summary>
         [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-        public sealed class SweepableFloatParamAttribute : SweepableParamAttribute
+        internal sealed class SweepableFloatParamAttribute : SweepableParamAttribute
         {
             public float Min { get; }
             public float Max { get; }
@@ -455,7 +455,7 @@ namespace Microsoft.ML.Runtime.EntryPoints
         /// An attribute used to indicate suggested sweep ranges for long parameter sweeping.
         /// </summary>
         [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-        public sealed class SweepableLongParamAttribute : SweepableParamAttribute
+        internal sealed class SweepableLongParamAttribute : SweepableParamAttribute
         {
             public long Min { get; }
             public long Max { get; }

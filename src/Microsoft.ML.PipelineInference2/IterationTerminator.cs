@@ -18,7 +18,6 @@ namespace Microsoft.ML.Runtime.PipelineInference
         private readonly Stopwatch _stopwatch;
         private readonly TimeSpan? _maxRunTime;
 
-        [TlcModule.Component(Name = "IterationLimited", FriendlyName = "Pipeline Sweep Iteration Terminator", Desc = "Terminators a sweep based on total number of iterations.")]
         public sealed class Arguments
         {
             //[Argument(ArgumentType.Required, HelpText = "Total number of iterations.", ShortName = "length")]

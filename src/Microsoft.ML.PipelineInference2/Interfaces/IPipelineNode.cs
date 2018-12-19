@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.ML.Core.Data;
+using Microsoft.ML.PipelineInference2;
 using Microsoft.ML.Runtime.Data;
 using Microsoft.ML.Runtime.EntryPoints;
 using Microsoft.ML.Runtime.FactorizationMachine;
@@ -39,7 +40,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         public virtual ParameterSet HyperSweeperParamSet { get; set; }
 
         protected void PropagateParamSetValues(ParameterSet hyperParams,
-            IEnumerable<TlcModule.SweepableParamAttribute> sweepParams)
+            IEnumerable<SweepableParam> sweepParams)
         {
             var spMap = sweepParams.ToDictionary(sp => sp.Name);
 
@@ -74,9 +75,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
     {
         public readonly string LearnerName;
 
-        public IEnumerable<TlcModule.SweepableParamAttribute> SweepParams { get; }
+        public IEnumerable<SweepableParam> SweepParams { get; }
 
-        public TrainerPipelineNode(IEnumerable<TlcModule.SweepableParamAttribute> sweepParams = null,
+        public TrainerPipelineNode(IEnumerable<SweepableParam> sweepParams = null,
             ParameterSet hyperParameterSet = null, string learnerName = null)
         {
             SweepParams = sweepParams.ToArray();
@@ -195,7 +196,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return BuildParameterSet(SweepParams);
         }
 
-        private static ParameterSet BuildParameterSet(IEnumerable<TlcModule.SweepableParamAttribute> sweepParams)
+        private static ParameterSet BuildParameterSet(IEnumerable<SweepableParam> sweepParams)
         {
             var paramValues = new List<IParameterValue>();
             foreach (var sweepParam in sweepParams)
@@ -203,13 +204,13 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 IParameterValue paramValue = null;
                 switch (sweepParam)
                 {
-                    case TlcModule.SweepableDiscreteParamAttribute dp:
+                    case SweepableDiscreteParam dp:
                         paramValue = new StringParameterValue(dp.Name, dp.ProcessedValue().ToString());
                         break;
-                    case TlcModule.SweepableFloatParamAttribute fp:
+                    case SweepableFloatParam fp:
                         paramValue = new FloatParameterValue(fp.Name, (float)fp.RawValue);
                         break;
-                    case TlcModule.SweepableLongParamAttribute lp:
+                    case SweepableLongParam lp:
                         paramValue = new LongParameterValue(lp.Name, (long)lp.RawValue);
                         break;
                         //default: throw?

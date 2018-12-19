@@ -174,7 +174,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return mapping;
         }
 
-        public static TlcModule.SweepableParamAttribute[] GetSweepRangesNewApi(string learnerName)
+        public static SweepableParam[] GetSweepRangesNewApi(string learnerName)
         {
             Type argsType = null;
             if (learnerName == "AveragedPerceptronBinaryClassifier")
@@ -220,9 +220,9 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return GetSweepRanges(argsType);
         }
 
-        public static TlcModule.SweepableParamAttribute[] GetSweepRanges(Type learnerInputType)
+        public static SweepableParam[] GetSweepRanges(Type learnerInputType)
         {
-            var paramSet = new List<TlcModule.SweepableParamAttribute>();
+            var paramSet = new List<SweepableParam>();
 
             var bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public;
 
@@ -241,12 +241,12 @@ namespace Microsoft.ML.Runtime.PipelineInference
                 var member = members.ElementAt(i);
                 var memberValueGetter = memberValueGetters.ElementAt(i);
 
-                var sweepableAttrs = member.GetCustomAttributes(typeof(TlcModule.SweepableParamAttribute), true);
+                var sweepableAttrs = member.GetCustomAttributes(typeof(SweepableParam), true);
                 if(!sweepableAttrs.Any())
                 {
                     continue;
                 }
-                var sweepableAttr = sweepableAttrs.First() as TlcModule.SweepableParamAttribute;
+                var sweepableAttr = sweepableAttrs.First() as SweepableParam;
                 sweepableAttr.Name = sweepableAttr.Name ?? member.Name;
 
                 var memberValue = memberValueGetter.GetValue(instance);
@@ -296,49 +296,49 @@ namespace Microsoft.ML.Runtime.PipelineInference
             }
         }
 
-        public static IValueGenerator ToIValueGenerator(TlcModule.SweepableParamAttribute attr)
+        public static IValueGenerator ToIValueGenerator(SweepableParam param)
         {
-            if (attr is TlcModule.SweepableLongParamAttribute sweepableLongParamAttr)
+            if (param is SweepableLongParam sweepableLongParam)
             {
                 var args = new LongParamArguments
                 {
-                    Min = sweepableLongParamAttr.Min,
-                    Max = sweepableLongParamAttr.Max,
-                    LogBase = sweepableLongParamAttr.IsLogScale,
-                    Name = sweepableLongParamAttr.Name,
-                    StepSize = sweepableLongParamAttr.StepSize
+                    Min = sweepableLongParam.Min,
+                    Max = sweepableLongParam.Max,
+                    LogBase = sweepableLongParam.IsLogScale,
+                    Name = sweepableLongParam.Name,
+                    StepSize = sweepableLongParam.StepSize
                 };
-                if (sweepableLongParamAttr.NumSteps != null)
-                    args.NumSteps = (int)sweepableLongParamAttr.NumSteps;
+                if (sweepableLongParam.NumSteps != null)
+                    args.NumSteps = (int)sweepableLongParam.NumSteps;
                 return new LongValueGenerator(args);
             }
 
-            if (attr is TlcModule.SweepableFloatParamAttribute sweepableFloatParamAttr)
+            if (param is SweepableFloatParam sweepableFloatParam)
             {
                 var args = new FloatParamArguments
                 {
-                    Min = sweepableFloatParamAttr.Min,
-                    Max = sweepableFloatParamAttr.Max,
-                    LogBase = sweepableFloatParamAttr.IsLogScale,
-                    Name = sweepableFloatParamAttr.Name,
-                    StepSize = sweepableFloatParamAttr.StepSize
+                    Min = sweepableFloatParam.Min,
+                    Max = sweepableFloatParam.Max,
+                    LogBase = sweepableFloatParam.IsLogScale,
+                    Name = sweepableFloatParam.Name,
+                    StepSize = sweepableFloatParam.StepSize
                 };
-                if (sweepableFloatParamAttr.NumSteps != null)
-                    args.NumSteps = (int)sweepableFloatParamAttr.NumSteps;
+                if (sweepableFloatParam.NumSteps != null)
+                    args.NumSteps = (int)sweepableFloatParam.NumSteps;
                 return new FloatValueGenerator(args);
             }
 
-            if (attr is TlcModule.SweepableDiscreteParamAttribute sweepableDiscreteParamAttr)
+            if (param is SweepableDiscreteParam sweepableDiscreteParam)
             {
                 var args = new DiscreteParamArguments
                 {
-                    Name = sweepableDiscreteParamAttr.Name,
-                    Values = sweepableDiscreteParamAttr.Options.Select(o => o.ToString()).ToArray()
+                    Name = sweepableDiscreteParam.Name,
+                    Values = sweepableDiscreteParam.Options.Select(o => o.ToString()).ToArray()
                 };
                 return new DiscreteValueGenerator(args);
             }
 
-            throw new Exception($"Sweeping only supported for Discrete, Long, and Float parameter types. Unrecognized type {attr.GetType()}");
+            throw new Exception($"Sweeping only supported for Discrete, Long, and Float parameter types. Unrecognized type {param.GetType()}");
         }
 
         private static void SetValue(PropertyInfo pi, IComparable value, object entryPointObj, Type propertyType)
@@ -368,7 +368,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// <summary>
         /// Updates properties of entryPointObj instance based on the values in sweepParams
         /// </summary>
-        public static bool UpdateProperties(object entryPointObj, IEnumerable<TlcModule.SweepableParamAttribute> sweepParams)
+        public static bool UpdateProperties(object entryPointObj, IEnumerable<SweepableParam> sweepParams)
         {
             bool result = true;
             foreach (var param in sweepParams)
@@ -382,7 +382,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         continue;
                     var propType = Nullable.GetUnderlyingType(pi.PropertyType) ?? pi.PropertyType;
 
-                    if (param is TlcModule.SweepableDiscreteParamAttribute dp)
+                    if (param is SweepableDiscreteParam dp)
                     {
                         var optIndex = (int)dp.RawValue;
                         //Contracts.Assert(0 <= optIndex && optIndex < dp.Options.Length, $"Options index out of range: {optIndex}");
@@ -420,7 +420,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return result && CheckEntryPointStateMatchesParamValues(entryPointObj, sweepParams);
         }
 
-        public static bool UpdatePropertiesAndFields(object entryPointObj, IEnumerable<TlcModule.SweepableParamAttribute> sweepParams)
+        public static bool UpdatePropertiesAndFields(object entryPointObj, IEnumerable<SweepableParam> sweepParams)
         {
             var result = UpdateProperties(entryPointObj, sweepParams);
             result &= UpdateFields(entryPointObj, sweepParams);
@@ -430,7 +430,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         /// <summary>
         /// Updates properties of entryPointObj instance based on the values in sweepParams
         /// </summary>
-        public static bool UpdateFields(object entryPointObj, IEnumerable<TlcModule.SweepableParamAttribute> sweepParams)
+        public static bool UpdateFields(object entryPointObj, IEnumerable<SweepableParam> sweepParams)
         {
             bool result = true;
             foreach (var param in sweepParams)
@@ -444,7 +444,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         continue;
                     var propType = Nullable.GetUnderlyingType(fi.FieldType) ?? fi.FieldType;
 
-                    if (param is TlcModule.SweepableDiscreteParamAttribute dp)
+                    if (param is SweepableDiscreteParam dp)
                     {
                         var optIndex = (int)dp.RawValue;
                         //Contracts.Assert(0 <= optIndex && optIndex < dp.Options.Length, $"Options index out of range: {optIndex}");
@@ -483,7 +483,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
         }
 
         public static bool CheckEntryPointStateMatchesParamValues(object entryPointObj,
-            IEnumerable<TlcModule.SweepableParamAttribute> sweepParams)
+            IEnumerable<SweepableParam> sweepParams)
         {
             foreach (var param in sweepParams)
             {
@@ -514,7 +514,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             return history.Select(h => ConvertToRunResult(h.Learner, h.PerformanceSummary, isMetricMaximizing)).ToArray();
         }
         
-        public static IValueGenerator[] ConvertToValueGenerators(IEnumerable<TlcModule.SweepableParamAttribute> hps)
+        public static IValueGenerator[] ConvertToValueGenerators(IEnumerable<SweepableParam> hps)
         {
             var results = new IValueGenerator[hps.Count()];
 
@@ -522,7 +522,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             {
                 switch (hps.ElementAt(i))
                 {
-                    case TlcModule.SweepableDiscreteParamAttribute dp:
+                    case SweepableDiscreteParam dp:
                         var dpArgs = new DiscreteParamArguments()
                         {
                             Name = dp.Name,
@@ -531,7 +531,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         results[i] = new DiscreteValueGenerator(dpArgs);
                         break;
 
-                    case TlcModule.SweepableFloatParamAttribute fp:
+                    case SweepableFloatParam fp:
                         var fpArgs = new FloatParamArguments()
                         {
                             Name = fp.Name,
@@ -550,7 +550,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
                         results[i] = new FloatValueGenerator(fpArgs);
                         break;
 
-                    case TlcModule.SweepableLongParamAttribute lp:
+                    case SweepableLongParam lp:
                         var lpArgs = new LongParamArguments()
                         {
                             Name = lp.Name,

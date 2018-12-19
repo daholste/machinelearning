@@ -35,9 +35,7 @@ namespace Microsoft.ML.Runtime.PipelineInference
             Second,
             Third
         }
-
-        [TlcModule.Component(Name = "Rocket", FriendlyName = "Rocket Engine",
-            Desc = "AutoML engine that consists of distinct, hierarchical stages of operation.")]
+        
         public sealed class Arguments
         {
             public const int TopKLearners = 3;
