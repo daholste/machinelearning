@@ -16,17 +16,31 @@ namespace Microsoft.ML.AutoML
             CacheBeforeTrainer cacheBeforeTrainerSettings)
         {
             var trainerInfo = trainer.BuildTrainer().Info;
-            AddNormalizationTransforms(context, trainerInfo, transforms);
+            AddNormalizationTransform(context, trainerInfo, transforms);
             var cacheBeforeTrainer = ShouldCacheBeforeTrainer(trainerInfo, cacheBeforeTrainerSettings);
             return new SuggestedPipeline(transforms, transformsPostTrainer, trainer, context, cacheBeforeTrainer);
         }
 
-        private static void AddNormalizationTransforms(MLContext context,
+        private static void AddNormalizationTransform(MLContext context,
             TrainerInfo trainerInfo,
             ICollection<SuggestedTransform> transforms)
         {
             // Only add normalization if trainer needs it
             if (!trainerInfo.NeedNormalization)
+            {
+                return;
+            }
+
+            var transform = NormalizingExtension.CreateSuggestedTransform(context, DefaultColumnNames.Features, DefaultColumnNames.Features);
+            transforms.Add(transform);
+        }
+
+        private static void AddCachingTransform(MLContext context,
+            TrainerInfo trainerInfo,
+            ICollection<SuggestedTransform> transforms)
+        {
+            // Only add caching if trainer wants it
+            if (!trainerInfo.WantCaching)
             {
                 return;
             }
